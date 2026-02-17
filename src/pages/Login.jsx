@@ -1,15 +1,18 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const { setUser } = useAuth()
+  const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
     const fakeUser = { email, role: 'member' }
     setUser(fakeUser)
+    navigate(`/${fakeUser.role}`)
   }
 
   return (

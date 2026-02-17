@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Register() {
@@ -7,11 +8,13 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('member')
   const { setUser } = useAuth()
+  const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
     const fakeUser = { name, email, role }
     setUser(fakeUser)
+    navigate(`/${role}`)
   }
 
   return (
