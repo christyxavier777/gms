@@ -1,12 +1,15 @@
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const { setUser } = useAuth()
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log({ email, password })
+    const fakeUser = { email, role: 'member' }
+    setUser(fakeUser)
   }
 
   return (
