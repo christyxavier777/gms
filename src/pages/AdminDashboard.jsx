@@ -1,3 +1,9 @@
+import DashboardLayout from '../components/DashboardLayout'
+
 export default function AdminDashboard() {
-  return <div>Admin Dashboard</div>
+  return (
+    <DashboardLayout title="Admin">
+      <div>Admin Dashboard</div>
+    </DashboardLayout>
+  )
 }

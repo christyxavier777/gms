@@ -1,3 +1,9 @@
+import DashboardLayout from '../components/DashboardLayout'
+
 export default function TrainerDashboard() {
-  return <div>Trainer Dashboard</div>
+  return (
+    <DashboardLayout title="Trainer">
+      <div>Trainer Dashboard</div>
+    </DashboardLayout>
+  )
 }
