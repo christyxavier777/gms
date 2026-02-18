@@ -5,18 +5,21 @@ import { useAuth } from '../context/AuthContext'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { setUser } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!email || !password) {
-      setError('All fields are required')
+    const errors = {}
+    if (!email) errors.email = 'Email is required'
+    if (!password) errors.password = 'Password is required'
+    if (Object.keys(errors).length) {
+      setError(errors)
       return
     }
-    setError('')
+    setError({})
     setIsSubmitting(true)
     const fakeUser = { email, role: 'member' }
     setUser(fakeUser)
@@ -35,9 +38,13 @@ export default function Login() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              if (error.email) setError((prev) => { const next = { ...prev }; delete next.email; return next })
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
           />
+          {error.email && <p className="text-red-600 mt-2">{error.email}</p>}
         </div>
         
         <div className="mb-6">
@@ -45,9 +52,13 @@ export default function Login() {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              if (error.password) setError((prev) => { const next = { ...prev }; delete next.password; return next })
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
           />
+          {error.password && <p className="text-red-600 mt-2">{error.password}</p>}
         </div>
         
         <button
