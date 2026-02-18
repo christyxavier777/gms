@@ -6,6 +6,7 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { setUser } = useAuth()
   const navigate = useNavigate()
 
@@ -16,9 +17,11 @@ export default function Login() {
       return
     }
     setError('')
+    setIsSubmitting(true)
     const fakeUser = { email, role: 'member' }
     setUser(fakeUser)
     localStorage.setItem("user", JSON.stringify(fakeUser))
+    setIsSubmitting(false)
     navigate(`/${fakeUser.role}`)
   }
 
@@ -47,8 +50,12 @@ export default function Login() {
           />
         </div>
         
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-medium">
-          Login
+        <button
+          type="submit"
+          disabled={!email || !password || isSubmitting}
+          className="w-full bg-blue-600 text-white py-2 rounded font-medium"
+        >
+          {isSubmitting ? 'Submitting...' : 'Login'}
         </button>
         {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>

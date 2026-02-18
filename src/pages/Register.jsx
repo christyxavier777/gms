@@ -8,6 +8,7 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('member')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { setUser } = useAuth()
   const navigate = useNavigate()
 
@@ -18,9 +19,11 @@ export default function Register() {
       return
     }
     setError('')
+    setIsSubmitting(true)
     const fakeUser = { name, email, role }
     setUser(fakeUser)
     localStorage.setItem("user", JSON.stringify(fakeUser))
+    setIsSubmitting(false)
     navigate(`/${role}`)
   }
 
@@ -72,8 +75,12 @@ export default function Register() {
           </select>
         </div>
         
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-medium">
-          Register
+        <button
+          type="submit"
+          disabled={!name || !email || !password || !role || isSubmitting}
+          className="w-full bg-blue-600 text-white py-2 rounded font-medium"
+        >
+          {isSubmitting ? 'Submitting...' : 'Register'}
         </button>
         {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
