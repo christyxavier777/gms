@@ -12,6 +12,7 @@ export default function Login() {
     e.preventDefault()
     const fakeUser = { email, role: 'member' }
     setUser(fakeUser)
+    localStorage.setItem("user", JSON.stringify(fakeUser))
     navigate(`/${fakeUser.role}`)
   }
 

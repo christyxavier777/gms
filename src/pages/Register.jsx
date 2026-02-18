@@ -14,6 +14,7 @@ export default function Register() {
     e.preventDefault()
     const fakeUser = { name, email, role }
     setUser(fakeUser)
+    localStorage.setItem("user", JSON.stringify(fakeUser))
     navigate(`/${role}`)
   }
 
