@@ -7,11 +7,17 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('member')
+  const [error, setError] = useState('')
   const { setUser } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!name || !email || !password || !role) {
+      setError('All fields are required')
+      return
+    }
+    setError('')
     const fakeUser = { name, email, role }
     setUser(fakeUser)
     localStorage.setItem("user", JSON.stringify(fakeUser))
@@ -69,6 +75,7 @@ export default function Register() {
         <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-medium">
           Register
         </button>
+        {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
     </div>
   )

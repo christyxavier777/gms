@@ -5,11 +5,17 @@ import { useAuth } from '../context/AuthContext'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const { setUser } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!email || !password) {
+      setError('All fields are required')
+      return
+    }
+    setError('')
     const fakeUser = { email, role: 'member' }
     setUser(fakeUser)
     localStorage.setItem("user", JSON.stringify(fakeUser))
@@ -44,6 +50,7 @@ export default function Login() {
         <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-medium">
           Login
         </button>
+        {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
     </div>
   )
