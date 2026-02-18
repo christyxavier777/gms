@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
   let dashboardPath = null
   if (user) {
@@ -28,7 +29,12 @@ export default function Navbar() {
                 <Link to={dashboardPath} className="text-white hover:text-gray-200">Dashboard</Link>
               </li>
               <li>
-                <button className="text-white hover:text-gray-200 bg-transparent">Logout</button>
+                <button
+                  onClick={() => { logout(); navigate('/'); }}
+                  className="text-white hover:text-gray-200 bg-transparent"
+                >
+                  Logout
+                </button>
               </li>
             </>
           )}
