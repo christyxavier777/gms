@@ -29,11 +29,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md max-w-md w-full space-y-6">
-        <h1 className="text-2xl font-bold mb-6">Login</h1>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md max-w-md w-full space-y-4">
+        <h1 className="text-2xl font-semibold">Login</h1>
 
-        <div>
+        <div className="space-y-1">
           <label className="block text-sm font-medium mb-1">Email</label>
           <input
             type="email"
@@ -42,12 +42,12 @@ export default function Login() {
               setEmail(e.target.value)
               if (error.email) setError((prev) => { const next = { ...prev }; delete next.email; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
           />
           {error.email && <p className="text-red-600 mt-2">{error.email}</p>}
         </div>
 
-        <div>
+        <div className="space-y-1">
           <label className="block text-sm font-medium mb-1">Password</label>
           <input
             type="password"
@@ -56,7 +56,7 @@ export default function Login() {
               setPassword(e.target.value)
               if (error.password) setError((prev) => { const next = { ...prev }; delete next.password; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
           />
           {error.password && <p className="text-red-600 mt-2">{error.password}</p>}
         </div>
@@ -64,7 +64,7 @@ export default function Login() {
         <button
           type="submit"
           disabled={!email || !password || isSubmitting}
-          className="w-full bg-blue-600 text-white py-2 rounded font-medium"
+          className="w-full bg-blue-600 text-white py-2 rounded font-medium text-base"
         >
           {isSubmitting ? 'Submitting...' : 'Login'}
         </button>

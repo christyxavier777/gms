@@ -33,11 +33,11 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md max-w-md w-full space-y-6">
-        <h1 className="text-2xl font-bold mb-6">Register</h1>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md max-w-md w-full space-y-4">
+        <h1 className="text-2xl font-semibold">Register</h1>
 
-        <div>
+        <div className="space-y-1">
           <label className="block text-sm font-medium mb-1">Name</label>
           <input
             type="text"
@@ -46,12 +46,12 @@ export default function Register() {
               setName(e.target.value)
               if (error.name) setError((prev) => { const next = { ...prev }; delete next.name; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
           />
           {error.name && <p className="text-red-600 mt-2">{error.name}</p>}
         </div>
 
-        <div>
+        <div className="space-y-1">
           <label className="block text-sm font-medium mb-1">Email</label>
           <input
             type="email"
@@ -60,12 +60,12 @@ export default function Register() {
               setEmail(e.target.value)
               if (error.email) setError((prev) => { const next = { ...prev }; delete next.email; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
           />
           {error.email && <p className="text-red-600 mt-2">{error.email}</p>}
         </div>
 
-        <div>
+        <div className="space-y-1">
           <label className="block text-sm font-medium mb-1">Password</label>
           <input
             type="password"
@@ -74,12 +74,12 @@ export default function Register() {
               setPassword(e.target.value)
               if (error.password) setError((prev) => { const next = { ...prev }; delete next.password; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
           />
           {error.password && <p className="text-red-600 mt-2">{error.password}</p>}
         </div>
 
-        <div>
+        <div className="space-y-1">
           <label className="block text-sm font-medium mb-1">Role</label>
           <select
             value={role}
@@ -87,7 +87,7 @@ export default function Register() {
               setRole(e.target.value)
               if (error.role) setError((prev) => { const next = { ...prev }; delete next.role; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
           >
             <option value="member">Member</option>
             <option value="trainer">Trainer</option>
@@ -99,7 +99,7 @@ export default function Register() {
         <button
           type="submit"
           disabled={!name || !email || !password || !role || isSubmitting}
-          className="w-full bg-blue-600 text-white py-2 rounded font-medium"
+          className="w-full bg-blue-600 text-white py-2 rounded font-medium text-base"
         >
           {isSubmitting ? 'Submitting...' : 'Register'}
         </button>

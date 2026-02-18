@@ -14,24 +14,24 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-blue-600 p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <h2 className="text-white text-xl font-bold">Gym Management</h2>
-        <ul className="flex space-x-4 items-center">
+    <nav className="bg-blue-600 py-3">
+      <div className="container mx-auto flex justify-between items-center px-4">
+        <h2 className="text-white text-2xl font-semibold">Gym Management</h2>
+        <ul className="flex space-x-6 items-center">
           {user === null ? (
             <>
-              <li><Link to="/" className="text-white hover:text-gray-200">Login</Link></li>
-              <li><Link to="/register" className="text-white hover:text-gray-200">Register</Link></li>
+              <li><Link to="/" className="text-white hover:text-gray-200 text-base font-medium">Login</Link></li>
+              <li><Link to="/register" className="text-white hover:text-gray-200 text-base font-medium">Register</Link></li>
             </>
           ) : (
             <>
               <li>
-                <Link to={dashboardPath} className="text-white hover:text-gray-200">Dashboard</Link>
+                <Link to={dashboardPath} className="text-white hover:text-gray-200 text-base font-medium">Dashboard</Link>
               </li>
               <li>
                 <button
                   onClick={() => { logout(); navigate('/'); }}
-                  className="text-white hover:text-gray-200 bg-transparent"
+                  className="text-white hover:text-gray-200 bg-transparent text-base font-medium"
                 >
                   Logout
                 </button>

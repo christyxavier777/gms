@@ -8,9 +8,12 @@ export default function MemberDashboard() {
 
   return (
     <DashboardLayout title="Member">
-      <div>
-        Member Dashboard
-        <button onClick={() => { logout(); navigate('/'); }} className="ml-4 text-sm text-blue-600">Logout</button>
+      <div className="p-4 bg-white rounded-md shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Member Dashboard</h2>
+          <button onClick={() => { logout(); navigate('/'); }} className="text-sm text-blue-600 font-medium">Logout</button>
+        </div>
+        <p className="text-base font-medium mt-4">Welcome to your member dashboard.</p>
       </div>
     </DashboardLayout>
   )
