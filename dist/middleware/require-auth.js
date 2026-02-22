@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAuth = requireAuth;
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt_1 = require("../auth/jwt");
 const http_error_1 = require("./http-error");
 // Ensures a valid Bearer token is present and attaches auth context to request.
@@ -21,8 +25,14 @@ function requireAuth(req, _res, next) {
         req.auth = { userId: payload.userId, role: payload.role };
         next();
     }
-    catch {
-        throw new http_error_1.HttpError(401, "INVALID_TOKEN", "Invalid or expired token");
+    catch (error) {
+        if (error instanceof jsonwebtoken_1.default.TokenExpiredError) {
+            throw new http_error_1.HttpError(401, "TOKEN_EXPIRED", "Token has expired");
+        }
+        if (error instanceof jsonwebtoken_1.default.JsonWebTokenError) {
+            throw new http_error_1.HttpError(401, "INVALID_TOKEN", "Invalid token");
+        }
+        throw error;
     }
 }
 //# sourceMappingURL=require-auth.js.map

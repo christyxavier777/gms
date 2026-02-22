@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import { verifyAccessToken } from "../auth/jwt";
 import { HttpError } from "./http-error";
 
@@ -21,7 +22,13 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
     }
     req.auth = { userId: payload.userId, role: payload.role };
     next();
-  } catch {
-    throw new HttpError(401, "INVALID_TOKEN", "Invalid or expired token");
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new HttpError(401, "TOKEN_EXPIRED", "Token has expired");
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new HttpError(401, "INVALID_TOKEN", "Invalid token");
+    }
+    throw error;
   }
 }

@@ -21,6 +21,11 @@ exports.env = {
     databaseUrl: readRequiredEnv("DATABASE_URL"),
     jwtSecret: readRequiredEnv("JWT_SECRET"),
     jwtExpiresIn: readRequiredEnv("JWT_EXPIRES_IN"),
+    jsonBodyLimit: process.env.JSON_BODY_LIMIT?.trim() || "100kb",
+    authRateLimitWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS ?? "900000"),
+    authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX ?? "20"),
+    mutationRateLimitWindowMs: Number(process.env.MUTATION_RATE_LIMIT_WINDOW_MS ?? "60000"),
+    mutationRateLimitMax: Number(process.env.MUTATION_RATE_LIMIT_MAX ?? "120"),
     adminSeed: {
         name: readRequiredEnv("ADMIN_NAME"),
         email: readRequiredEnv("ADMIN_EMAIL").toLowerCase(),
@@ -29,5 +34,11 @@ exports.env = {
 };
 if (Number.isNaN(exports.env.port) || exports.env.port <= 0) {
     throw new Error("Environment variable PORT must be a positive number.");
+}
+if (Number.isNaN(exports.env.authRateLimitWindowMs) ||
+    Number.isNaN(exports.env.authRateLimitMax) ||
+    Number.isNaN(exports.env.mutationRateLimitWindowMs) ||
+    Number.isNaN(exports.env.mutationRateLimitMax)) {
+    throw new Error("Rate limit environment variables must be valid numbers.");
 }
 //# sourceMappingURL=env.js.map
