@@ -19,12 +19,42 @@ enum UserStatus {
 }
 
 model User {
+  id                    String        @id @default(uuid())
+  name                  String
+  email                 String        @unique
+  passwordHash          String
+  role                  Role          @default(MEMBER)
+  status                UserStatus    @default(ACTIVE)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  workoutPlansCreated   WorkoutPlan[] @relation("WorkoutPlansCreated")
+  workoutPlansAssigned  WorkoutPlan[] @relation("WorkoutPlansAssigned")
+  dietPlansCreated      DietPlan[]    @relation("DietPlansCreated")
+  dietPlansAssigned     DietPlan[]    @relation("DietPlansAssigned")
+}
+
+model WorkoutPlan {
   id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(MEMBER)
-  status       UserStatus @default(ACTIVE)
+  title        String
+  description  String
+  createdById  String
+  assignedToId String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  createdBy  User  @relation("WorkoutPlansCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo User? @relation("WorkoutPlansAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+}
+
+model DietPlan {
+  id           String   @id @default(uuid())
+  title        String
+  description  String
+  createdById  String
+  assignedToId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdBy  User  @relation("DietPlansCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo User? @relation("DietPlansAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
 }

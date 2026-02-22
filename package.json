@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init_auth",
     "prisma:migrate:phase2": "prisma migrate dev --name phase2_user_status",
+    "prisma:migrate:phase3": "prisma migrate dev --name phase3_plan_management",
     "seed:admin": "tsx src/scripts/seed-admin.ts"
   },
   "keywords": [],
