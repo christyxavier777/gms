@@ -14,24 +14,24 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-blue-600 py-3">
-      <div className="container mx-auto flex justify-between items-center px-4">
-        <h2 className="text-white text-2xl font-semibold">Gym Management</h2>
+    <nav className="sticky top-0 z-50 border-b border-[#E21A2C]/30 bg-[#1A1A1A] py-3">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4">
+        <h2 className="text-xl font-black uppercase tracking-[0.14em] text-white md:text-2xl">Gym Management</h2>
         <ul className="flex space-x-6 items-center">
           {user === null ? (
             <>
-              <li><Link to="/" className="text-white hover:text-gray-200 text-base font-medium">Login</Link></li>
-              <li><Link to="/register" className="text-white hover:text-gray-200 text-base font-medium">Register</Link></li>
+              <li><Link to="/login" className="text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:text-[#E21A2C]">Login</Link></li>
+              <li><Link to="/register" className="text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:text-[#E21A2C]">Register</Link></li>
             </>
           ) : (
             <>
               <li>
-                <Link to={dashboardPath} className="text-white hover:text-gray-200 text-base font-medium">Dashboard</Link>
+                <Link to={dashboardPath} className="text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:text-[#E21A2C]">Dashboard</Link>
               </li>
               <li>
                 <button
-                  onClick={() => { logout(); navigate('/'); }}
-                  className="text-white hover:text-gray-200 bg-transparent text-base font-medium"
+                  onClick={() => { logout(); navigate('/login'); }}
+                  className="border border-[#E21A2C] bg-[#1A1A1A] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#E21A2C]"
                 >
                   Logout
                 </button>

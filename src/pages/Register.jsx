@@ -33,12 +33,12 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md max-w-md w-full space-y-4">
-        <h1 className="text-2xl font-semibold">Register</h1>
+    <div className="flex min-h-screen items-center justify-center bg-[#1A1A1A] px-4 py-8 text-white">
+      <form onSubmit={handleSubmit} className="w-full max-w-md space-y-5 border border-[#E21A2C]/50 bg-[#111111] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+        <h1 className="text-2xl font-black uppercase tracking-[0.12em]">Register</h1>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium mb-1">Name</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Name</label>
           <input
             type="text"
             value={name}
@@ -46,13 +46,13 @@ export default function Register() {
               setName(e.target.value)
               if (error.name) setError((prev) => { const next = { ...prev }; delete next.name; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
+            className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           />
-          {error.name && <p className="text-red-600 mt-2">{error.name}</p>}
+          {error.name && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.name}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Email</label>
           <input
             type="email"
             value={email}
@@ -60,13 +60,13 @@ export default function Register() {
               setEmail(e.target.value)
               if (error.email) setError((prev) => { const next = { ...prev }; delete next.email; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
+            className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           />
-          {error.email && <p className="text-red-600 mt-2">{error.email}</p>}
+          {error.email && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.email}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium mb-1">Password</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Password</label>
           <input
             type="password"
             value={password}
@@ -74,32 +74,32 @@ export default function Register() {
               setPassword(e.target.value)
               if (error.password) setError((prev) => { const next = { ...prev }; delete next.password; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
+            className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           />
-          {error.password && <p className="text-red-600 mt-2">{error.password}</p>}
+          {error.password && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.password}</p>}
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium mb-1">Role</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Role</label>
           <select
             value={role}
             onChange={(e) => {
               setRole(e.target.value)
               if (error.role) setError((prev) => { const next = { ...prev }; delete next.role; return next })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-base"
+            className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           >
             <option value="member">Member</option>
             <option value="trainer">Trainer</option>
             <option value="admin">Admin</option>
           </select>
-          {error.role && <p className="text-red-600 mt-2">{error.role}</p>}
+          {error.role && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.role}</p>}
         </div>
 
         <button
           type="submit"
           disabled={!name || !email || !password || !role || isSubmitting}
-          className="w-full bg-blue-600 text-white py-2 rounded font-medium text-base"
+          className="w-full border border-[#E21A2C] bg-[#E21A2C] py-2 text-base font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#b91524] disabled:cursor-not-allowed disabled:border-[#4d4d4d] disabled:bg-[#2a2a2a] disabled:text-gray-500"
         >
           {isSubmitting ? 'Submitting...' : 'Register'}
         </button>
