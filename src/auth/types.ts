@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role, UserStatus } from "@prisma/client";
 
 // JWT claims stored in access tokens for authn/authz checks.
 export type AuthTokenPayload = {
@@ -12,6 +12,7 @@ export type SafeUser = {
   name: string;
   email: string;
   role: Role;
+  status: UserStatus;
   createdAt: Date;
   updatedAt: Date;
 };
