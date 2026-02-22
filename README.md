@@ -1,16 +1,103 @@
-# React + Vite
+# Gym Management System (Client)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project Overview
 
-Currently, two official plugins are available:
+This repository contains the client-side application for the Gym Management System.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The current client is responsible for presenting a public-facing landing experience, including marketing content and onboarding-focused user interface sections.
 
-## React Compiler
+Backend responsibilities such as business logic, data persistence, authentication, and APIs are handled in a separate backend repository and are intentionally out of scope here.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Scope (Current)
 
-## Expanding the ESLint configuration
+At this stage, the frontend scope is limited to a landing page experience.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Included sections:
+- Header
+- Hero
+- Features
+- Call-to-Action (CTA)
+- Footer
+
+Current implementation focus:
+- Responsive layouts across mobile, tablet, and desktop
+- Accessible UI patterns (semantic structure, readable contrast, keyboard-friendly interactions)
+- No data fetching and no backend integration
+
+## Tech Stack
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- npm (package management and scripts)
+
+## Folder Structure
+
+```text
+src/
+  components/   # Reusable UI building blocks (layout, sections, shared UI pieces)
+  pages/        # Page-level composition (landing page and route-level views)
+  styles/       # Global styles, Tailwind layer extensions, and design tokens
+  assets/       # Static assets (images, icons, brand media)
+  main.tsx      # App bootstrap and React root mounting
+  App.tsx       # Top-level app composition
+```
+
+## Setup Instructions
+
+### Prerequisites
+
+- Node.js (LTS recommended, version 18+)
+- npm (comes with Node.js)
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Run Development Server
+
+```bash
+npm run dev
+```
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Preview Production Build (Optional)
+
+```bash
+npm run preview
+```
+
+## Design and UI Principles
+
+- Mobile-first implementation to ensure strong small-screen usability
+- Accessibility-first choices for semantics, keyboard usage, and readable interfaces
+- Design token usage for consistent spacing, typography, and color behavior
+- Component-driven UI to keep sections reusable, maintainable, and testable
+
+## Environment Variables
+
+No environment variables are required at this stage.
+
+## Out of Scope (Explicit)
+
+- Authentication
+- Dashboards
+- Backend integration
+- Payments
+- Analytics
+- Mobile applications
+
+## Future Work
+
+- Integrate with backend services
+- Add authentication flows
+- Build user dashboards by role
+- Introduce subscription-related views
