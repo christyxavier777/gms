@@ -5,6 +5,7 @@ import { meRouter } from "./me";
 import { usersRouter } from "./users";
 import { workoutPlansRouter } from "./workout-plans";
 import { dietPlansRouter } from "./diet-plans";
+import { subscriptionsRouter } from "./subscriptions";
 
 // Registers all application routes in one place.
 export const routes = Router();
@@ -15,3 +16,4 @@ routes.use(meRouter);
 routes.use(usersRouter);
 routes.use(workoutPlansRouter);
 routes.use(dietPlansRouter);
+routes.use(subscriptionsRouter);
