@@ -1,0 +1,910 @@
+openapi: 3.0.3
+info:
+  title: Gym Management Backend API
+  version: 1.0.0
+  description: Backend API frozen after phases 0-7. Contracts reflect implemented behavior.
+servers:
+  - url: http://localhost:4000
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+  /auth/register:
+    post:
+      security: []
+      tags: [Auth]
+      summary: Register member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/SafeUser'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '429': { $ref: '#/components/responses/RateLimitedAuthError' }
+  /auth/login:
+    post:
+      security: []
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '429': { $ref: '#/components/responses/RateLimitedAuthError' }
+  /me:
+    get:
+      tags: [Auth]
+      summary: Current profile
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/SafeUser'
+        '401': { $ref: '#/components/responses/AuthError' }
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: ADMIN only.
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: '#/components/schemas/SafeUser' }
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by id
+      description: ADMIN or self.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/SafeUser'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      tags: [Users]
+      summary: Delete user
+      description: ADMIN only. Self-delete blocked.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /users/{id}/status:
+    patch:
+      tags: [Users]
+      summary: Update user status
+      description: ADMIN only.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchUserStatusRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/SafeUser'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /workout-plans:
+    post:
+      tags: [Workout Plans]
+      summary: Create workout plan
+      description: ADMIN or TRAINER.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+    get:
+      tags: [Workout Plans]
+      summary: List workout plans
+      description: ADMIN all, TRAINER own, MEMBER assigned.
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items: { $ref: '#/components/schemas/SafePlan' }
+        '401': { $ref: '#/components/responses/AuthError' }
+  /workout-plans/{id}:
+    get:
+      tags: [Workout Plans]
+      summary: Get workout plan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '200':
+          description: Plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    patch:
+      tags: [Workout Plans]
+      summary: Update workout plan
+      description: ADMIN or owning TRAINER.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlanRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      tags: [Workout Plans]
+      summary: Delete workout plan
+      description: ADMIN or owning TRAINER.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /workout-plans/{id}/assign:
+    post:
+      tags: [Workout Plans]
+      summary: Assign workout plan
+      description: ADMIN or owning TRAINER. Reassignment overwrites.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignPlanRequest'
+      responses:
+        '200':
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /diet-plans:
+    post:
+      tags: [Diet Plans]
+      summary: Create diet plan
+      description: ADMIN or TRAINER.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+    get:
+      tags: [Diet Plans]
+      summary: List diet plans
+      description: ADMIN all, TRAINER own, MEMBER assigned.
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items: { $ref: '#/components/schemas/SafePlan' }
+        '401': { $ref: '#/components/responses/AuthError' }
+  /diet-plans/{id}:
+    get:
+      tags: [Diet Plans]
+      summary: Get diet plan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '200':
+          description: Plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    patch:
+      tags: [Diet Plans]
+      summary: Update diet plan
+      description: ADMIN or owning TRAINER.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlanRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      tags: [Diet Plans]
+      summary: Delete diet plan
+      description: ADMIN or owning TRAINER.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /diet-plans/{id}/assign:
+    post:
+      tags: [Diet Plans]
+      summary: Assign diet plan
+      description: ADMIN or owning TRAINER. Reassignment overwrites.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignPlanRequest'
+      responses:
+        '200':
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { $ref: '#/components/schemas/SafePlan' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /subscriptions:
+    post:
+      tags: [Subscriptions]
+      summary: Create subscription
+      description: ADMIN only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription: { $ref: '#/components/schemas/SafeSubscription' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+    get:
+      tags: [Subscriptions]
+      summary: List subscriptions
+      description: ADMIN only.
+      responses:
+        '200':
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscriptions:
+                    type: array
+                    items: { $ref: '#/components/schemas/SafeSubscription' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+  /subscriptions/{id}:
+    get:
+      tags: [Subscriptions]
+      summary: Get subscription by id
+      description: ADMIN or owner member. TRAINER access depends on assignment stub and is currently blocked.
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        '200':
+          description: Subscription
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription: { $ref: '#/components/schemas/SafeSubscription' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /me/subscription:
+    get:
+      tags: [Subscriptions]
+      summary: Current member subscription
+      description: MEMBER only.
+      responses:
+        '200':
+          description: Subscription or null
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription:
+                    oneOf:
+                      - $ref: '#/components/schemas/SafeSubscription'
+                      - type: 'null'
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+  /subscriptions/{id}/cancel:
+    post:
+      tags: [Subscriptions]
+      summary: Cancel subscription
+      description: ADMIN only.
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription: { $ref: '#/components/schemas/SafeSubscription' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /progress:
+    post:
+      tags: [Progress]
+      summary: Create progress
+      description: ADMIN or TRAINER only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProgressRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  progress: { $ref: '#/components/schemas/SafeProgress' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+    get:
+      tags: [Progress]
+      summary: List all progress
+      description: ADMIN only, ordered by recordedAt DESC.
+      responses:
+        '200':
+          description: Progress list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  progress:
+                    type: array
+                    items: { $ref: '#/components/schemas/SafeProgress' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+  /progress/{id}:
+    get:
+      tags: [Progress]
+      summary: Get member progress
+      description: ADMIN, member self, or assigned TRAINER.
+      parameters:
+        - $ref: '#/components/parameters/ProgressId'
+      responses:
+        '200':
+          description: Progress list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  progress:
+                    type: array
+                    items: { $ref: '#/components/schemas/SafeProgress' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      tags: [Progress]
+      summary: Delete progress
+      description: ADMIN only.
+      parameters:
+        - $ref: '#/components/parameters/ProgressId'
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+  /dashboard/admin:
+    get:
+      tags: [Dashboard]
+      summary: Admin dashboard
+      description: ADMIN only.
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dashboard:
+                    $ref: '#/components/schemas/AdminDashboard'
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+  /dashboard/trainer:
+    get:
+      tags: [Dashboard]
+      summary: Trainer dashboard
+      description: TRAINER only.
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 5 }
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dashboard:
+                    $ref: '#/components/schemas/TrainerDashboard'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+  /dashboard/member:
+    get:
+      tags: [Dashboard]
+      summary: Member dashboard
+      description: MEMBER only.
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 5 }
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dashboard:
+                    $ref: '#/components/schemas/MemberDashboard'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/ForbiddenError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PlanId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SubscriptionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProgressUserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProgressId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1 }
+    SafeUser:
+      type: object
+      required: [id, name, email, role, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [ADMIN, TRAINER, MEMBER] }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Pagination:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+    PatchUserStatusRequest:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+    CreatePlanRequest:
+      type: object
+      required: [title, description]
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+    UpdatePlanRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+    AssignPlanRequest:
+      type: object
+      required: [memberId]
+      additionalProperties: false
+      properties:
+        memberId: { type: string, format: uuid }
+    SafePlan:
+      type: object
+      required: [id, title, description, assignedToId, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        assignedToId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateSubscriptionRequest:
+      type: object
+      required: [userId, planName, startDate, endDate]
+      additionalProperties: false
+      properties:
+        userId: { type: string, format: uuid }
+        planName: { type: string, minLength: 1 }
+        startDate: { type: string, format: date-time }
+        endDate: { type: string, format: date-time }
+    SafeSubscription:
+      type: object
+      required: [id, userId, planName, startDate, endDate, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        planName: { type: string }
+        startDate: { type: string, format: date-time }
+        endDate: { type: string, format: date-time }
+        status: { type: string, enum: [ACTIVE, EXPIRED, CANCELLED] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateProgressRequest:
+      type: object
+      required: [userId, recordedAt]
+      additionalProperties: false
+      description: At least one metric or non-empty notes required by validation.
+      properties:
+        userId: { type: string, format: uuid }
+        weight: { type: number, nullable: true }
+        bodyFat: { type: number, minimum: 0, maximum: 100, nullable: true }
+        bmi: { type: number, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+        recordedAt: { type: string, format: date-time }
+    SafeProgress:
+      type: object
+      required: [id, userId, recordedById, weight, bodyFat, bmi, notes, recordedAt, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        recordedById: { type: string, format: uuid }
+        weight: { type: number, nullable: true }
+        bodyFat: { type: number, nullable: true }
+        bmi: { type: number, nullable: true }
+        notes: { type: string, nullable: true }
+        recordedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminDashboard:
+      type: object
+      properties:
+        totalUsers: { type: integer }
+        activeMembers: { type: integer }
+        activeSubscriptions: { type: integer }
+        expiredSubscriptions: { type: integer }
+        totalTrainers: { type: integer }
+        totalPlans: { type: integer }
+    TrainerDashboard:
+      type: object
+      properties:
+        assignedMembersCount: { type: integer }
+        plansCreatedByTrainer: { type: integer }
+        recentProgressEntries:
+          type: array
+          items: { $ref: '#/components/schemas/SafeProgress' }
+    MemberDashboard:
+      type: object
+      properties:
+        activeSubscriptionSummary:
+          oneOf:
+            - type: object
+              properties:
+                id: { type: string, format: uuid }
+                planName: { type: string }
+                startDate: { type: string, format: date-time }
+                endDate: { type: string, format: date-time }
+                status: { type: string, enum: [ACTIVE, EXPIRED, CANCELLED] }
+            - type: 'null'
+        assignedWorkoutPlans:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              title: { type: string }
+              description: { type: string }
+              createdAt: { type: string, format: date-time }
+              updatedAt: { type: string, format: date-time }
+        assignedDietPlans:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              title: { type: string }
+              description: { type: string }
+              createdAt: { type: string, format: date-time }
+              updatedAt: { type: string, format: date-time }
+        recentProgressEntries:
+          type: array
+          items: { $ref: '#/components/schemas/SafeProgress' }
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { nullable: true }
+  responses:
+    ErrorResponse:
+      description: Normalized API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    AuthError:
+      description: Missing/invalid/expired auth token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ForbiddenError:
+      description: Role/ownership forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RateLimitedAuthError:
+      description: Auth route rate limit exceeded (`AUTH_RATE_LIMIT_*`)
+      headers:
+        RateLimit-Limit:
+          schema: { type: string }
+        RateLimit-Remaining:
+          schema: { type: string }
+        RateLimit-Reset:
+          schema: { type: string }
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
