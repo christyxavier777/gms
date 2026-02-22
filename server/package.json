@@ -1,0 +1,41 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Phase 0 backend foundation for gym management system",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init_auth",
+    "prisma:migrate:phase2": "prisma migrate dev --name phase2_user_status",
+    "prisma:migrate:phase3": "prisma migrate dev --name phase3_plan_management",
+    "prisma:migrate:phase4": "prisma migrate dev --name phase4_subscription_lifecycle",
+    "prisma:migrate:phase5": "prisma migrate dev --name phase5_progress_tracking",
+    "seed:admin": "tsx src/scripts/seed-admin.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^6.16.2",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^17.3.1",
+    "express-rate-limit": "^7.4.1",
+    "express": "^5.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^25.3.0",
+    "prisma": "^6.16.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

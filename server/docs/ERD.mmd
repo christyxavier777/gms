@@ -1,0 +1,63 @@
+erDiagram
+  USER {
+    string id PK
+    string name
+    string email UK
+    string passwordHash
+    string role
+    string status
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  WORKOUT_PLAN {
+    string id PK
+    string title
+    string description
+    string createdById FK
+    string assignedToId FK
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  DIET_PLAN {
+    string id PK
+    string title
+    string description
+    string createdById FK
+    string assignedToId FK
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  SUBSCRIPTION {
+    string id PK
+    string userId FK
+    string planName
+    datetime startDate
+    datetime endDate
+    string status
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  PROGRESS {
+    string id PK
+    string userId FK
+    string recordedById FK
+    float weight
+    float bodyFat
+    float bmi
+    string notes
+    datetime recordedAt
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  USER ||--o{ WORKOUT_PLAN : creates
+  USER ||--o{ WORKOUT_PLAN : assigned
+  USER ||--o{ DIET_PLAN : creates
+  USER ||--o{ DIET_PLAN : assigned
+  USER ||--o{ SUBSCRIPTION : owns
+  USER ||--o{ PROGRESS : member_progress
+  USER ||--o{ PROGRESS : recorded_by
