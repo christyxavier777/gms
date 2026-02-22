@@ -9,6 +9,7 @@ const users_1 = require("./users");
 const workout_plans_1 = require("./workout-plans");
 const diet_plans_1 = require("./diet-plans");
 const subscriptions_1 = require("./subscriptions");
+const progress_1 = require("./progress");
 // Registers all application routes in one place.
 exports.routes = (0, express_1.Router)();
 exports.routes.use(health_1.healthRouter);
@@ -18,4 +19,5 @@ exports.routes.use(users_1.usersRouter);
 exports.routes.use(workout_plans_1.workoutPlansRouter);
 exports.routes.use(diet_plans_1.dietPlansRouter);
 exports.routes.use(subscriptions_1.subscriptionsRouter);
+exports.routes.use(progress_1.progressRouter);
 //# sourceMappingURL=index.js.map
