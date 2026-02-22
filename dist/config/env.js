@@ -9,16 +9,23 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config({ quiet: true });
 function readRequiredEnv(name) {
     const value = process.env[name];
-    if (!value) {
+    if (!value || value.trim().length === 0) {
         throw new Error(`Missing required environment variable: ${name}`);
     }
-    return value;
+    return value.trim();
 }
 // Centralized, validated runtime configuration for the server process.
 exports.env = {
     nodeEnv: process.env.NODE_ENV ?? "development",
     port: Number(readRequiredEnv("PORT")),
     databaseUrl: readRequiredEnv("DATABASE_URL"),
+    jwtSecret: readRequiredEnv("JWT_SECRET"),
+    jwtExpiresIn: readRequiredEnv("JWT_EXPIRES_IN"),
+    adminSeed: {
+        name: readRequiredEnv("ADMIN_NAME"),
+        email: readRequiredEnv("ADMIN_EMAIL").toLowerCase(),
+        password: readRequiredEnv("ADMIN_PASSWORD"),
+    },
 };
 if (Number.isNaN(exports.env.port) || exports.env.port <= 0) {
     throw new Error("Environment variable PORT must be a positive number.");
