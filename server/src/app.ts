@@ -14,6 +14,26 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  app.use((req, res, next) => {
+    const origin = req.header("origin");
+    const allowedOrigins = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
+
+    if (origin && allowedOrigins.has(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Vary", "Origin");
+      res.header("Access-Control-Allow-Credentials", "true");
+    }
+
+    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send();
+      return;
+    }
+
+    next();
+  });
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "same-site" },
