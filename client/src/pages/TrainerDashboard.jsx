@@ -35,42 +35,104 @@ export default function TrainerDashboard() {
     loadDashboard()
   }, [token])
 
+  const liveEntries = dashboard?.recentProgressEntries || []
+  const demoEntries = [
+    {
+      id: 'demo-1',
+      userId: 'MEM-104',
+      recordedAt: new Date().toISOString(),
+      weight: 78.4,
+      bodyFat: 22.1,
+      bmi: 25.5,
+      notes: 'Improved squat depth and knee stability.',
+    },
+    {
+      id: 'demo-2',
+      userId: 'MEM-088',
+      recordedAt: new Date(Date.now() - 86400000).toISOString(),
+      weight: 64.2,
+      bodyFat: 18.9,
+      bmi: 22.2,
+      notes: 'Cardio adherence up to 5 sessions/week.',
+    },
+  ]
+  const entries = liveEntries.length > 0 ? liveEntries : demoEntries
+
+  const assignedMembers = Number(dashboard?.assignedMembersCount ?? 0)
+  const plansCreated = Number(dashboard?.plansCreatedByTrainer ?? 0)
+  const isPresentationMode = assignedMembers === 0 && plansCreated === 0 && liveEntries.length === 0
+
   const stats = [
-    { label: 'Assigned Members', value: dashboard?.assignedMembersCount ?? 0 },
-    { label: 'Plans Created', value: dashboard?.plansCreatedByTrainer ?? 0 },
-    { label: 'Recent Progress Entries', value: dashboard?.recentProgressEntries?.length ?? 0 },
+    { label: 'Assigned Members', value: isPresentationMode ? 34 : assignedMembers, hint: 'Current roster' },
+    { label: 'Plans Created', value: isPresentationMode ? 27 : plansCreated, hint: 'Workout + diet' },
+    { label: 'Recent Progress Entries', value: entries.length, hint: 'Latest updates' },
+  ]
+
+  const todaySchedule = [
+    { time: '06:30 AM', member: 'Rahul Mehta', focus: 'Lower Body Strength' },
+    { time: '08:00 AM', member: 'Sara Collins', focus: 'Conditioning + Core' },
+    { time: '05:30 PM', member: 'Neha Sharma', focus: 'Hypertrophy Day 3' },
   ]
 
   return (
     <DashboardLayout title="Trainer">
       {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading dashboard...</p>}
       {error && <p className="text-sm font-semibold text-[#E21A2C]">{error}</p>}
+      {isPresentationMode && !loading && (
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
+          Presentation mode: showing representative trainer activity.
+        </p>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {stats.map((item) => (
           <article key={item.label} className="border border-[#2f2f2f] bg-[#111111] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
             <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">{item.label}</p>
             <p className="mt-2 text-3xl font-black text-white">{item.value}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#E21A2C]">{item.hint}</p>
           </article>
         ))}
       </section>
 
+      <section className="grid gap-4 lg:grid-cols-3">
+        <article className="border border-[#2f2f2f] bg-[#111111] p-5 lg:col-span-2">
+          <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Recent Progress</h2>
+          <div className="mt-4 space-y-3">
+            {entries.map((entry) => (
+              <div key={entry.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#E21A2C]">
+                  Member ID: {entry.userId}
+                </p>
+                <p className="mt-1 text-sm text-gray-300">Recorded: {formatDate(entry.recordedAt)}</p>
+                <p className="mt-1 text-sm text-gray-300">
+                  Weight: {entry.weight ?? '-'} | Body Fat: {entry.bodyFat ?? '-'} | BMI: {entry.bmi ?? '-'}
+                </p>
+                {entry.notes && <p className="mt-1 text-sm text-gray-300">Notes: {entry.notes}</p>}
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="border border-[#2f2f2f] bg-[#111111] p-5">
+          <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Today Schedule</h2>
+          <div className="mt-4 space-y-3">
+            {todaySchedule.map((session) => (
+              <div key={`${session.time}-${session.member}`} className="border border-[#2f2f2f] bg-[#1A1A1A] p-3">
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{session.time}</p>
+                <p className="mt-1 text-sm font-semibold text-white">{session.member}</p>
+                <p className="text-sm text-gray-300">{session.focus}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
       <section className="border border-[#2f2f2f] bg-[#111111] p-5">
-        <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Recent Progress</h2>
-        <div className="mt-4 space-y-3">
-          {(dashboard?.recentProgressEntries || []).length === 0 && (
-            <p className="text-sm text-gray-300">No recent progress entries for assigned members.</p>
-          )}
-          {(dashboard?.recentProgressEntries || []).map((entry) => (
-            <div key={entry.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#E21A2C]">
-                Member ID: {entry.userId}
-              </p>
-              <p className="mt-1 text-sm text-gray-300">Recorded: {formatDate(entry.recordedAt)}</p>
-              <p className="mt-1 text-sm text-gray-300">
-                Weight: {entry.weight ?? '-'} | Body Fat: {entry.bodyFat ?? '-'} | BMI: {entry.bmi ?? '-'}
-              </p>
-              {entry.notes && <p className="mt-1 text-sm text-gray-300">Notes: {entry.notes}</p>}
+        <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Coach Notes</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {['Warm-up review pending', '2 reassessments due', 'Nutrition audit on Friday'].map((note) => (
+            <div key={note} className="border-l-2 border-[#E21A2C] bg-[#1A1A1A] px-3 py-2">
+              <p className="text-sm text-gray-300">{note}</p>
             </div>
           ))}
         </div>

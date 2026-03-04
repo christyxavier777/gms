@@ -62,6 +62,35 @@ export default function Subscriptions() {
     loadData()
   }, [token, user?.role])
 
+  const hasLiveAdminData = subscriptions.length > 0
+  const demoSubscriptions = [
+    {
+      id: 's-1',
+      userId: 'MEM-108',
+      planName: 'Pro Quarterly',
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90).toISOString(),
+      status: 'ACTIVE',
+    },
+    {
+      id: 's-2',
+      userId: 'MEM-204',
+      planName: 'Transformation Monthly',
+      startDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString(),
+      endDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
+      status: 'EXPIRED',
+    },
+    {
+      id: 's-3',
+      userId: 'MEM-056',
+      planName: 'Premium Half-Year',
+      startDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
+      endDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 160).toISOString(),
+      status: 'CANCELLED',
+    },
+  ]
+  const displaySubscriptions = hasLiveAdminData ? subscriptions : demoSubscriptions
+
   const handleCreate = async (e) => {
     e.preventDefault()
     try {
@@ -92,9 +121,33 @@ export default function Subscriptions() {
       {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading subscriptions...</p>}
       {error && <p className="text-sm font-semibold text-[#E21A2C]">{error}</p>}
       {success && <p className="text-sm font-semibold text-green-400">{success}</p>}
+      {isAdmin && !hasLiveAdminData && !loading && (
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
+          Presentation mode: showing representative subscription lifecycle data.
+        </p>
+      )}
 
       {isAdmin && (
         <>
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Total Subscriptions</p>
+              <p className="mt-2 text-2xl font-black text-white">{displaySubscriptions.length}</p>
+            </article>
+            <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Active</p>
+              <p className="mt-2 text-2xl font-black text-white">{displaySubscriptions.filter((s) => s.status === 'ACTIVE').length}</p>
+            </article>
+            <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Expired</p>
+              <p className="mt-2 text-2xl font-black text-white">{displaySubscriptions.filter((s) => s.status === 'EXPIRED').length}</p>
+            </article>
+            <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Cancelled</p>
+              <p className="mt-2 text-2xl font-black text-white">{displaySubscriptions.filter((s) => s.status === 'CANCELLED').length}</p>
+            </article>
+          </section>
+
           <form onSubmit={handleCreate} className="border border-[#2f2f2f] bg-[#111111] p-5">
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Create Subscription</h2>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -142,15 +195,15 @@ export default function Subscriptions() {
           <section className="border border-[#2f2f2f] bg-[#111111] p-5">
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">All Subscriptions</h2>
             <div className="mt-4 space-y-3">
-              {subscriptions.length === 0 && <p className="text-sm text-gray-300">No subscriptions found.</p>}
-              {subscriptions.map((sub) => (
+              {displaySubscriptions.length === 0 && <p className="text-sm text-gray-300">No subscriptions found.</p>}
+              {displaySubscriptions.map((sub) => (
                 <div key={sub.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
                   <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{sub.planName}</p>
                   <p className="mt-1 text-sm text-gray-300">Member ID: {sub.userId}</p>
                   <p className="mt-1 text-sm text-gray-300">
                     {toInputDate(sub.startDate)} to {toInputDate(sub.endDate)} | Status: {sub.status}
                   </p>
-                  {sub.status === 'ACTIVE' && (
+                  {sub.status === 'ACTIVE' && hasLiveAdminData && (
                     <button
                       type="button"
                       onClick={() => handleCancel(sub.id)}

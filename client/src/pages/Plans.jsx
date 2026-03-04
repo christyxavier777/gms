@@ -43,6 +43,18 @@ export default function Plans() {
     loadPlans()
   }, [token])
 
+  const hasLiveData = workoutPlans.length > 0 || dietPlans.length > 0
+  const demoWorkoutPlans = [
+    { id: 'dw-1', title: 'Strength Foundation', description: '4-day split for beginner-to-intermediate members', assignedToId: 'MEM-108' },
+    { id: 'dw-2', title: 'Fat Loss Conditioning', description: 'Circuit-based conditioning with progressive overload', assignedToId: 'MEM-204' },
+  ]
+  const demoDietPlans = [
+    { id: 'dd-1', title: 'Lean Muscle Plan', description: 'High-protein balanced meal strategy', assignedToId: 'MEM-108' },
+    { id: 'dd-2', title: 'Cutting Support Plan', description: 'Calorie-deficit friendly meal timing', assignedToId: 'MEM-204' },
+  ]
+  const displayedWorkoutPlans = hasLiveData ? workoutPlans : demoWorkoutPlans
+  const displayedDietPlans = hasLiveData ? dietPlans : demoDietPlans
+
   const handleCreateWorkout = async (e) => {
     e.preventDefault()
     try {
@@ -108,6 +120,34 @@ export default function Plans() {
       {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading plans...</p>}
       {error && <p className="text-sm font-semibold text-[#E21A2C]">{error}</p>}
       {success && <p className="text-sm font-semibold text-green-400">{success}</p>}
+      {!hasLiveData && !loading && (
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
+          Presentation mode: showing representative workout and diet plans.
+        </p>
+      )}
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Workout Plans</p>
+          <p className="mt-2 text-2xl font-black text-white">{displayedWorkoutPlans.length}</p>
+        </article>
+        <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Diet Plans</p>
+          <p className="mt-2 text-2xl font-black text-white">{displayedDietPlans.length}</p>
+        </article>
+        <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Assigned Workout</p>
+          <p className="mt-2 text-2xl font-black text-white">
+            {displayedWorkoutPlans.filter((p) => p.assignedToId).length}
+          </p>
+        </article>
+        <article className="border border-[#2f2f2f] bg-[#111111] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Assigned Diet</p>
+          <p className="mt-2 text-2xl font-black text-white">
+            {displayedDietPlans.filter((p) => p.assignedToId).length}
+          </p>
+        </article>
+      </section>
 
       {canManage && (
         <section className="grid gap-4 lg:grid-cols-2">
@@ -169,8 +209,8 @@ export default function Plans() {
         <article className="border border-[#2f2f2f] bg-[#111111] p-5">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Workout Plans</h2>
           <div className="mt-4 space-y-3">
-            {workoutPlans.length === 0 && <p className="text-sm text-gray-300">No workout plans found.</p>}
-            {workoutPlans.map((plan) => (
+            {displayedWorkoutPlans.length === 0 && <p className="text-sm text-gray-300">No workout plans found.</p>}
+            {displayedWorkoutPlans.map((plan) => (
               <div key={plan.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
                 <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
                 <p className="mt-1 text-sm text-gray-300">{plan.description}</p>
@@ -203,8 +243,8 @@ export default function Plans() {
         <article className="border border-[#2f2f2f] bg-[#111111] p-5">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Diet Plans</h2>
           <div className="mt-4 space-y-3">
-            {dietPlans.length === 0 && <p className="text-sm text-gray-300">No diet plans found.</p>}
-            {dietPlans.map((plan) => (
+            {displayedDietPlans.length === 0 && <p className="text-sm text-gray-300">No diet plans found.</p>}
+            {displayedDietPlans.map((plan) => (
               <div key={plan.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
                 <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
                 <p className="mt-1 text-sm text-gray-300">{plan.description}</p>

@@ -197,7 +197,7 @@ export default function Demo() {
           </div>
         </article>
         <article className="landing-rise relative overflow-hidden border border-[#2f2f2f] bg-[#0f0f0f]" style={{ animationDelay: "120ms" }}>
-          <img src={image2} alt="Gym members in training" className="h-full w-full object-cover opacity-45" />
+          <img src={image3} alt="Gym community training session" className="h-full w-full object-cover opacity-45" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
           <div className="absolute inset-x-0 bottom-0 p-6">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#E21A2C]">Social Proof / Community</p>

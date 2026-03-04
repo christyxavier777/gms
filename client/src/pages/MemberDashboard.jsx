@@ -36,17 +36,52 @@ export default function MemberDashboard() {
     loadDashboard()
   }, [token])
 
+  const workoutLive = dashboard?.assignedWorkoutPlans || []
+  const dietLive = dashboard?.assignedDietPlans || []
+  const progressLive = dashboard?.recentProgressEntries || []
+  const hasLiveData = workoutLive.length > 0 || dietLive.length > 0 || progressLive.length > 0
+
+  const workoutPlans = hasLiveData
+    ? workoutLive
+    : [
+        { id: 'w-1', title: 'Push Strength + Core', description: 'Bench, incline DB, cable fly, planks', updatedAt: new Date().toISOString() },
+        { id: 'w-2', title: 'Lower Body Progressive', description: 'Back squat, RDL, split squat, calf raises', updatedAt: new Date().toISOString() },
+      ]
+  const dietPlans = hasLiveData
+    ? dietLive
+    : [
+        { id: 'd-1', title: 'Lean Gain Plan', description: '2,450 kcal / high protein / 5 meals' },
+        { id: 'd-2', title: 'Rest Day Nutrition', description: '2,150 kcal / lower carbs / hydration focus' },
+      ]
+  const progressEntries = hasLiveData
+    ? progressLive
+    : [
+        { id: 'p-1', recordedAt: new Date().toISOString(), weight: 74.8, bodyFat: 19.2, bmi: 24.3, notes: 'Strength endurance improved.' },
+        { id: 'p-2', recordedAt: new Date(Date.now() - 86400000 * 7).toISOString(), weight: 75.4, bodyFat: 19.9, bmi: 24.6, notes: 'Recovery and sleep quality improved.' },
+      ]
+
   const metrics = [
-    { label: 'Assigned Workout Plans', value: dashboard?.assignedWorkoutPlans?.length ?? 0 },
-    { label: 'Assigned Diet Plans', value: dashboard?.assignedDietPlans?.length ?? 0 },
-    { label: 'Recent Progress Entries', value: dashboard?.recentProgressEntries?.length ?? 0 },
-    { label: 'Subscription Status', value: dashboard?.activeSubscriptionSummary?.status ?? 'NONE' },
+    { label: 'Assigned Workout Plans', value: workoutPlans.length, hint: 'Current training blocks' },
+    { label: 'Assigned Diet Plans', value: dietPlans.length, hint: 'Nutrition protocols' },
+    { label: 'Recent Progress Entries', value: progressEntries.length, hint: 'Logged performance' },
+    { label: 'Subscription Status', value: dashboard?.activeSubscriptionSummary?.status ?? (hasLiveData ? 'NONE' : 'ACTIVE'), hint: 'Membership lifecycle' },
+  ]
+
+  const reminders = [
+    'Hydration target today: 3.5L',
+    'Upload meal logs before 9:00 PM',
+    'Recovery stretch routine after workout',
   ]
 
   return (
     <DashboardLayout title="Member">
       {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading dashboard...</p>}
       {error && <p className="text-sm font-semibold text-[#E21A2C]">{error}</p>}
+      {!hasLiveData && !loading && (
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
+          Presentation mode: showing representative member journey data.
+        </p>
+      )}
 
       <section className="border border-[#2f2f2f] bg-[#111111] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
         <h2 className="text-xl font-black uppercase tracking-[0.08em] text-white">Welcome, {displayName}</h2>
@@ -60,6 +95,7 @@ export default function MemberDashboard() {
           <article key={item.label} className="border border-[#2f2f2f] bg-[#111111] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">{item.label}</p>
             <p className="mt-2 text-3xl font-black text-white">{item.value}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#E21A2C]">{item.hint}</p>
           </article>
         ))}
       </section>
@@ -68,10 +104,10 @@ export default function MemberDashboard() {
         <article className="border border-[#2f2f2f] bg-[#111111] p-5 lg:col-span-2">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Assigned Workout Plans</h2>
           <div className="mt-4 space-y-3">
-            {(dashboard?.assignedWorkoutPlans || []).length === 0 && (
+            {workoutPlans.length === 0 && (
               <p className="text-sm text-gray-300">No workout plan assigned yet.</p>
             )}
-            {(dashboard?.assignedWorkoutPlans || []).map((entry) => (
+            {workoutPlans.map((entry) => (
               <div key={entry.id} className="flex flex-col gap-2 border border-[#2f2f2f] bg-[#1A1A1A] p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{entry.title}</p>
@@ -86,10 +122,10 @@ export default function MemberDashboard() {
         <article className="border border-[#2f2f2f] bg-[#111111] p-5">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Assigned Diet Plans</h2>
           <div className="mt-4 space-y-3">
-            {(dashboard?.assignedDietPlans || []).length === 0 && (
+            {dietPlans.length === 0 && (
               <p className="text-sm text-gray-300">No diet plan assigned yet.</p>
             )}
-            {(dashboard?.assignedDietPlans || []).map((item) => (
+            {dietPlans.map((item) => (
               <div key={item.id} className="border-l-2 border-[#E21A2C] bg-[#1A1A1A] px-3 py-2">
                 <p className="text-sm font-semibold text-white">{item.title}</p>
                 <p className="text-sm text-gray-300">{item.description}</p>
@@ -103,10 +139,10 @@ export default function MemberDashboard() {
         <article className="border border-[#2f2f2f] bg-[#111111] p-5">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Recent Progress</h2>
           <div className="mt-4 grid gap-3">
-            {(dashboard?.recentProgressEntries || []).length === 0 && (
+            {progressEntries.length === 0 && (
               <p className="text-sm text-gray-300">No progress entries found.</p>
             )}
-            {(dashboard?.recentProgressEntries || []).map((entry) => (
+            {progressEntries.map((entry) => (
               <div key={entry.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-3">
                 <p className="text-sm font-semibold text-gray-300">
                   {formatDate(entry.recordedAt)} | Weight: {entry.weight ?? '-'} | Body Fat: {entry.bodyFat ?? '-'} | BMI: {entry.bmi ?? '-'}
@@ -123,7 +159,7 @@ export default function MemberDashboard() {
             <div className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
               <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Active Plan</p>
               <p className="mt-1 text-lg font-black text-white">
-                {dashboard?.activeSubscriptionSummary?.planName || 'No active plan'}
+                {dashboard?.activeSubscriptionSummary?.planName || (hasLiveData ? 'No active plan' : 'Pro Quarterly')}
               </p>
             </div>
             <div className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
@@ -131,11 +167,24 @@ export default function MemberDashboard() {
               <p className="mt-1 text-lg font-black text-white">
                 {dashboard?.activeSubscriptionSummary?.endDate
                   ? formatDate(dashboard.activeSubscriptionSummary.endDate)
-                  : '-'}
+                  : hasLiveData
+                    ? '-'
+                    : 'March 28, 2026'}
               </p>
             </div>
           </div>
         </article>
+      </section>
+
+      <section className="border border-[#2f2f2f] bg-[#111111] p-5">
+        <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Daily Reminders</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {reminders.map((item) => (
+            <div key={item} className="border-l-2 border-[#E21A2C] bg-[#1A1A1A] px-3 py-2">
+              <p className="text-sm text-gray-300">{item}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </DashboardLayout>
   )
