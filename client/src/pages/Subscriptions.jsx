@@ -104,6 +104,15 @@ export default function Subscriptions() {
     },
   ]
   const displaySubscriptions = hasLiveAdminData ? subscriptions : demoSubscriptions
+  const displayMySubscription =
+    mySubscription ||
+    {
+      id: 'my-demo-1',
+      planName: 'Pro Quarterly',
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90).toISOString(),
+      status: 'ACTIVE',
+    }
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -293,17 +302,18 @@ export default function Subscriptions() {
 
           <article className="border border-[#2f2f2f] bg-[#111111] p-5">
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">My Subscription</h2>
-            {!mySubscription ? (
-              <p className="mt-4 text-sm text-gray-300">No subscription found.</p>
-            ) : (
-              <div className="mt-4 border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-                <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{mySubscription.planName}</p>
-                <p className="mt-1 text-sm text-gray-300">
-                  {toInputDate(mySubscription.startDate)} to {toInputDate(mySubscription.endDate)}
-                </p>
-                <p className="mt-1 text-sm text-gray-300">Status: {mySubscription.status}</p>
-              </div>
+            {!mySubscription && !loading && (
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
+                Presentation mode: showing sample active subscription.
+              </p>
             )}
+            <div className="mt-4 border border-[#2f2f2f] bg-[#1A1A1A] p-4">
+              <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{displayMySubscription.planName}</p>
+              <p className="mt-1 text-sm text-gray-300">
+                {toInputDate(displayMySubscription.startDate)} to {toInputDate(displayMySubscription.endDate)}
+              </p>
+              <p className="mt-1 text-sm text-gray-300">Status: {displayMySubscription.status}</p>
+            </div>
           </article>
         </section>
       )}
