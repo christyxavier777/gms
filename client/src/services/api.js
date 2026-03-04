@@ -37,4 +37,22 @@ export const api = {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  getAdminDashboard: (token) =>
+    request('/dashboard/admin', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getTrainerDashboard: (token, limit = 5) =>
+    request(`/dashboard/trainer?limit=${limit}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getMemberDashboard: (token, limit = 5) =>
+    request(`/dashboard/member?limit=${limit}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 }
