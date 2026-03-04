@@ -5,6 +5,7 @@ import Register from './pages/Register'
 import AdminDashboard from './pages/AdminDashboard'
 import TrainerDashboard from './pages/TrainerDashboard'
 import MemberDashboard from './pages/MemberDashboard'
+import Plans from './pages/Plans'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 import Navbar from "./components/Navbar";
@@ -38,6 +39,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "TRAINER", "MEMBER"]}>
               <MemberDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "TRAINER", "MEMBER"]}>
+              <Plans />
             </ProtectedRoute>
           }
         />

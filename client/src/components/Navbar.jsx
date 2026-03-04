@@ -29,6 +29,9 @@ export default function Navbar() {
                 <Link to={dashboardPath} className="text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:text-[#E21A2C]">Dashboard</Link>
               </li>
               <li>
+                <Link to="/plans" className="text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:text-[#E21A2C]">Plans</Link>
+              </li>
+              <li>
                 <button
                   onClick={() => { logout(); navigate('/login'); }}
                   className="border border-[#E21A2C] bg-[#1A1A1A] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#E21A2C]"

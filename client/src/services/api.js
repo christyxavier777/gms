@@ -55,4 +55,56 @@ export const api = {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  listWorkoutPlans: (token) =>
+    request('/workout-plans', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  createWorkoutPlan: (token, payload) =>
+    request('/workout-plans', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  assignWorkoutPlan: (token, planId, memberId) =>
+    request(`/workout-plans/${planId}/assign`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ memberId }),
+    }),
+
+  listDietPlans: (token) =>
+    request('/diet-plans', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  createDietPlan: (token, payload) =>
+    request('/diet-plans', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  assignDietPlan: (token, planId, memberId) =>
+    request(`/diet-plans/${planId}/assign`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ memberId }),
+    }),
 }
