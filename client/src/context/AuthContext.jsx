@@ -54,8 +54,8 @@ export function AuthProvider({ children }) {
     return getDashboardPath(nextUser.role)
   }
 
-  const register = async ({ name, email, password }) => {
-    await api.register({ name, email, password })
+  const register = async ({ name, email, password, role, inviteCode }) => {
+    await api.register({ name, email, password, role, inviteCode })
     return login({ email, password })
   }
 

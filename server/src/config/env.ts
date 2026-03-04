@@ -37,6 +37,10 @@ export const env = {
     email: readRequiredEnv("ADMIN_EMAIL").toLowerCase(),
     password: readRequiredEnv("ADMIN_PASSWORD"),
   },
+  roleInviteCodes: {
+    trainer: process.env.TRAINER_INVITE_CODE?.trim() ?? "",
+    admin: process.env.ADMIN_INVITE_CODE?.trim() ?? "",
+  },
 };
 
 if (Number.isNaN(env.port) || env.port <= 0) {

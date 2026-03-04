@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword } from "./password";
 import { issueAccessToken } from "./jwt";
 import { LoginInput, RegisterInput } from "./schemas";
 import { SafeUser } from "./types";
+import { env } from "../config/env";
 
 const prisma = createPrismaClient();
 
@@ -28,13 +29,32 @@ export async function registerUser(input: RegisterInput): Promise<SafeUser> {
     throw new HttpError(409, "EMAIL_ALREADY_EXISTS", "Email is already registered");
   }
 
+  const requestedRole = input.role ?? Role.MEMBER;
+  if (requestedRole !== Role.MEMBER) {
+    const expectedCode =
+      requestedRole === Role.ADMIN ? env.roleInviteCodes.admin : env.roleInviteCodes.trainer;
+
+    if (!expectedCode) {
+      throw new HttpError(
+        400,
+        "ROLE_SIGNUP_DISABLED",
+        `${requestedRole.toLowerCase()} self-registration is disabled by server configuration`,
+      );
+    }
+
+    const providedCode = input.inviteCode?.trim() ?? "";
+    if (providedCode !== expectedCode) {
+      throw new HttpError(403, "INVALID_INVITE_CODE", "Invite code is invalid for selected role");
+    }
+  }
+
   const passwordHash = await hashPassword(input.password);
   const user = await prisma.user.create({
     data: {
       name: input.name,
       email,
       passwordHash,
-      role: Role.MEMBER,
+      role: requestedRole,
     },
   });
 
