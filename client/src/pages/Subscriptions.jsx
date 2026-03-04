@@ -3,12 +3,25 @@ import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
 
+const PLAN_CATALOG = [
+  { key: 'basic-monthly', name: 'Basic Monthly', priceInr: 1499, durationDays: 30, perks: 'Gym floor access + starter plan' },
+  { key: 'pro-quarterly', name: 'Pro Quarterly', priceInr: 3999, durationDays: 90, perks: 'Trainer check-ins + diet guidance' },
+  { key: 'elite-annual', name: 'Elite Annual', priceInr: 14999, durationDays: 365, perks: 'Priority coaching + premium tracking' },
+]
+
 function toInputDate(value) {
   try {
     return new Date(value).toISOString().slice(0, 10)
   } catch (_error) {
     return ''
   }
+}
+
+function addDays(dateInput, days) {
+  const date = new Date(dateInput)
+  if (Number.isNaN(date.getTime())) return dateInput
+  date.setDate(date.getDate() + days)
+  return toInputDate(date.toISOString())
 }
 
 export default function Subscriptions() {
@@ -24,11 +37,12 @@ export default function Subscriptions() {
   const [success, setSuccess] = useState('')
 
   const today = new Date().toISOString().slice(0, 10)
+  const [selectedPlanKey, setSelectedPlanKey] = useState(PLAN_CATALOG[0].key)
   const [form, setForm] = useState({
     userId: '',
-    planName: '',
+    planName: PLAN_CATALOG[0].name,
     startDate: today,
-    endDate: today,
+    endDate: addDays(today, PLAN_CATALOG[0].durationDays),
   })
 
   const loadData = async () => {
@@ -116,6 +130,26 @@ export default function Subscriptions() {
     }
   }
 
+  const handleSelectPlan = (planKey) => {
+    const plan = PLAN_CATALOG.find((item) => item.key === planKey)
+    if (!plan) return
+    setSelectedPlanKey(planKey)
+    setForm((prev) => ({
+      ...prev,
+      planName: plan.name,
+      endDate: addDays(prev.startDate, plan.durationDays),
+    }))
+  }
+
+  const handleStartDateChange = (nextDate) => {
+    const plan = PLAN_CATALOG.find((item) => item.key === selectedPlanKey)
+    setForm((prev) => ({
+      ...prev,
+      startDate: nextDate,
+      endDate: plan ? addDays(nextDate, plan.durationDays) : prev.endDate,
+    }))
+  }
+
   return (
     <DashboardLayout title="Subscriptions">
       {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading subscriptions...</p>}
@@ -150,6 +184,25 @@ export default function Subscriptions() {
 
           <form onSubmit={handleCreate} className="border border-[#2f2f2f] bg-[#111111] p-5">
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Create Subscription</h2>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {PLAN_CATALOG.map((plan) => (
+                <button
+                  key={plan.key}
+                  type="button"
+                  onClick={() => handleSelectPlan(plan.key)}
+                  className={`border p-3 text-left transition-colors ${
+                    selectedPlanKey === plan.key
+                      ? 'border-[#E21A2C] bg-[#1A1A1A]'
+                      : 'border-[#2f2f2f] bg-[#141414] hover:border-[#E21A2C]/60'
+                  }`}
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.1em] text-[#E21A2C]">{plan.name}</p>
+                  <p className="mt-1 text-lg font-black text-white">Rs {plan.priceInr.toLocaleString('en-IN')}</p>
+                  <p className="mt-1 text-xs text-gray-300">{plan.durationDays} days</p>
+                  <p className="mt-1 text-xs text-gray-400">{plan.perks}</p>
+                </button>
+              ))}
+            </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <select
                 value={form.userId}
@@ -173,16 +226,19 @@ export default function Subscriptions() {
               <input
                 type="date"
                 value={form.startDate}
-                onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                onChange={(e) => handleStartDateChange(e.target.value)}
                 className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-white outline-none focus:border-[#E21A2C]"
               />
               <input
                 type="date"
                 value={form.endDate}
-                onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-white outline-none focus:border-[#E21A2C]"
+                readOnly
+                className="w-full border border-[#333333] bg-[#121212] px-3 py-2 text-white outline-none"
               />
             </div>
+            <p className="mt-2 text-xs text-gray-400">
+              End date is auto-calculated based on the selected plan duration.
+            </p>
             <button
               type="submit"
               disabled={!form.userId || !form.planName || !form.startDate || !form.endDate}
@@ -220,19 +276,35 @@ export default function Subscriptions() {
       )}
 
       {isMember && (
-        <section className="border border-[#2f2f2f] bg-[#111111] p-5">
-          <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">My Subscription</h2>
-          {!mySubscription ? (
-            <p className="mt-4 text-sm text-gray-300">No subscription found.</p>
-          ) : (
-            <div className="mt-4 border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-              <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{mySubscription.planName}</p>
-              <p className="mt-1 text-sm text-gray-300">
-                {toInputDate(mySubscription.startDate)} to {toInputDate(mySubscription.endDate)}
-              </p>
-              <p className="mt-1 text-sm text-gray-300">Status: {mySubscription.status}</p>
+        <section className="grid gap-4 lg:grid-cols-2">
+          <article className="border border-[#2f2f2f] bg-[#111111] p-5">
+            <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Available Plans</h2>
+            <div className="mt-4 space-y-3">
+              {PLAN_CATALOG.map((plan) => (
+                <div key={plan.key} className="border border-[#2f2f2f] bg-[#1A1A1A] p-3">
+                  <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.name}</p>
+                  <p className="mt-1 text-lg font-black text-white">Rs {plan.priceInr.toLocaleString('en-IN')}</p>
+                  <p className="text-sm text-gray-300">{plan.durationDays} days</p>
+                  <p className="text-xs text-gray-400">{plan.perks}</p>
+                </div>
+              ))}
             </div>
-          )}
+          </article>
+
+          <article className="border border-[#2f2f2f] bg-[#111111] p-5">
+            <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">My Subscription</h2>
+            {!mySubscription ? (
+              <p className="mt-4 text-sm text-gray-300">No subscription found.</p>
+            ) : (
+              <div className="mt-4 border border-[#2f2f2f] bg-[#1A1A1A] p-4">
+                <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{mySubscription.planName}</p>
+                <p className="mt-1 text-sm text-gray-300">
+                  {toInputDate(mySubscription.startDate)} to {toInputDate(mySubscription.endDate)}
+                </p>
+                <p className="mt-1 text-sm text-gray-300">Status: {mySubscription.status}</p>
+              </div>
+            )}
+          </article>
         </section>
       )}
 
