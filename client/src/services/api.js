@@ -107,4 +107,38 @@ export const api = {
       },
       body: JSON.stringify({ memberId }),
     }),
+
+  listUsers: (token, page = 1, pageSize = 100) =>
+    request(`/users?page=${page}&pageSize=${pageSize}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  listSubscriptions: (token) =>
+    request('/subscriptions', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  createSubscription: (token, payload) =>
+    request('/subscriptions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  cancelSubscription: (token, subscriptionId) =>
+    request(`/subscriptions/${subscriptionId}/cancel`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getMySubscription: (token) =>
+    request('/me/subscription', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 }

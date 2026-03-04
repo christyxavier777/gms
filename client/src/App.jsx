@@ -6,6 +6,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import TrainerDashboard from './pages/TrainerDashboard'
 import MemberDashboard from './pages/MemberDashboard'
 import Plans from './pages/Plans'
+import Subscriptions from './pages/Subscriptions'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 import Navbar from "./components/Navbar";
@@ -47,6 +48,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "TRAINER", "MEMBER"]}>
               <Plans />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/subscriptions"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "TRAINER", "MEMBER"]}>
+              <Subscriptions />
             </ProtectedRoute>
           }
         />
