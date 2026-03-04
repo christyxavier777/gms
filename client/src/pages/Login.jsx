@@ -7,10 +7,10 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { setUser } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const errors = {}
     if (!email) errors.email = 'Email is required'
@@ -21,17 +21,23 @@ export default function Login() {
     }
     setError({})
     setIsSubmitting(true)
-    const fakeUser = { email, role: 'member' }
-    setUser(fakeUser)
-    localStorage.setItem('user', JSON.stringify(fakeUser))
-    setIsSubmitting(false)
-    navigate(`/${fakeUser.role}`)
+    try {
+      const dashboardPath = await login({ email, password })
+      navigate(dashboardPath)
+    } catch (err) {
+      setError({
+        form: err?.message || 'Login failed. Please try again.',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#1A1A1A] px-4 py-8 text-white">
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-5 border border-[#E21A2C]/50 bg-[#111111] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
         <h1 className="text-2xl font-black uppercase tracking-[0.12em]">Login</h1>
+        {error.form && <p className="text-sm font-semibold text-[#E21A2C]">{error.form}</p>}
 
         <div className="space-y-1">
           <label className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Email</label>
@@ -66,7 +72,7 @@ export default function Login() {
           disabled={!email || !password || isSubmitting}
           className="w-full border border-[#E21A2C] bg-[#E21A2C] py-2 text-base font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#b91524] disabled:cursor-not-allowed disabled:border-[#4d4d4d] disabled:bg-[#2a2a2a] disabled:text-gray-500"
         >
-          {isSubmitting ? 'Submitting...' : 'Login'}
+          {isSubmitting ? 'Signing in...' : 'Login'}
         </button>
       </form>
     </div>

@@ -1,10 +1,8 @@
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 
 export default function MemberDashboard() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const displayName = user?.email ? user.email.split('@')[0] : 'Member'
 
   const metrics = [
@@ -37,10 +35,7 @@ export default function MemberDashboard() {
   return (
     <DashboardLayout title="Member">
       <section className="border border-[#2f2f2f] bg-[#111111] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-black uppercase tracking-[0.08em] text-white">Welcome, {displayName}</h2>
-          <button onClick={() => { logout(); navigate('/login'); }} className="border border-[#E21A2C] bg-[#1A1A1A] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#E21A2C]">Logout</button>
-        </div>
+        <h2 className="text-xl font-black uppercase tracking-[0.08em] text-white">Welcome, {displayName}</h2>
         <p className="mt-4 border-l-4 border-[#E21A2C] pl-3 text-sm font-semibold text-gray-300">
           Your focus this week: complete 4 strength sessions and maintain at least 80% meal-plan adherence.
         </p>

@@ -1,31 +1,40 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+
+async function request(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, options)
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const message =
+      data?.error?.message || data?.message || `Request failed with status ${response.status}`
+    const error = new Error(message)
+    error.status = response.status
+    error.code = data?.error?.code || null
+    error.details = data?.error?.details || null
+    throw error
+  }
+
+  return data
+}
 
 export const api = {
-  // Auth endpoints
-  login: async (credentials) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
+  login: (credentials) =>
+    request('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
-    });
-    return response.json();
-  },
+    }),
 
-  register: async (userData) => {
-    const response = await fetch(`${API_URL}/auth/register`, {
+  register: (userData) =>
+    request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
-    });
-    return response.json();
-  },
+    }),
 
-  logout: async () => {
-    const response = await fetch(`${API_URL}/auth/logout`, {
-      method: 'POST',
-    });
-    return response.json();
-  },
-
-  // Add more API methods as needed
-};
+  me: (token) =>
+    request('/me', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+}

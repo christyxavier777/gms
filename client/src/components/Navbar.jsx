@@ -8,8 +8,8 @@ export default function Navbar() {
   let dashboardPath = null
   if (user) {
     const role = user.role
-    if (role === 'admin') dashboardPath = '/admin'
-    else if (role === 'trainer') dashboardPath = '/trainer'
+    if (role === 'ADMIN') dashboardPath = '/admin'
+    else if (role === 'TRAINER') dashboardPath = '/trainer'
     else dashboardPath = '/member'
   }
 
