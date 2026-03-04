@@ -49,3 +49,20 @@
 ## ERD
 
 Mermaid ERD source is in `docs/ERD.mmd`.
+
+## Normalization Notes (1NF, 2NF, 3NF)
+
+Current Prisma schema is modeled to satisfy practical 3NF for core entities.
+
+- 1NF:
+  - Atomic columns only (no repeating groups in single fields).
+  - Primary key per table (`id`).
+- 2NF:
+  - All non-key attributes depend on the full primary key.
+  - Single-column primary keys avoid partial dependency issues.
+- 3NF:
+  - No intended transitive dependency among non-key attributes in core tables.
+  - Core entities (`User`, `WorkoutPlan`, `DietPlan`, `Subscription`, `Progress`) store attributes dependent on their own table key.
+
+Optional future refinement:
+- Introduce a dedicated subscription plan catalog table (name, price, duration) and reference it from `Subscription` to reduce repeated `planName` text and centralize plan metadata.

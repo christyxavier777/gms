@@ -139,3 +139,4 @@ npm run dev
 - OpenAPI: `docs/openapi.yaml`
 - Architecture summary: `docs/ARCHITECTURE.md`
 - ERD (Mermaid): `docs/ERD.mmd`
+- Database normalization notes (1NF/2NF/3NF): `docs/ARCHITECTURE.md#normalization-notes-1nf-2nf-3nf`
