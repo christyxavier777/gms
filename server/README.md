@@ -22,6 +22,7 @@ Academic/demo-grade backend API for a gym management system. Core backend scope 
 - Database: PostgreSQL
 - Auth: JWT + bcrypt
 - Validation: Zod
+- Cache: Redis (with in-memory fallback)
 - Security middleware: helmet, express-rate-limit
 
 ## Folder Structure
@@ -62,6 +63,8 @@ server/
 | `NODE_ENV` | No | `development` | Runtime mode (`development`/`production`) |
 | `PORT` | Yes | - | HTTP port |
 | `DATABASE_URL` | Yes | - | Prisma datasource URL |
+| `REDIS_URL` | No | - | Redis connection URL for distributed cache/rate-limit state |
+| `DASHBOARD_CACHE_TTL_SEC` | No | `45` | Dashboard cache TTL in seconds |
 | `JWT_SECRET` | Yes | - | JWT signing secret |
 | `JWT_EXPIRES_IN` | Yes | - | JWT TTL (example: `1d`) |
 | `ADMIN_NAME` | Yes | - | Seed admin display name |

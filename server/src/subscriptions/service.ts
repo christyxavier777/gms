@@ -41,13 +41,17 @@ async function ensureMemberUser(userId: string): Promise<void> {
 // Updates stale ACTIVE subscriptions to EXPIRED based on end date.
 export async function autoExpireSubscriptions(): Promise<void> {
   const today = todayUtc();
-  await prisma.subscription.updateMany({
+  const result = await prisma.subscription.updateMany({
     where: {
       status: SubscriptionStatus.ACTIVE,
       endDate: { lt: today },
     },
     data: { status: SubscriptionStatus.EXPIRED },
   });
+
+  if (result.count > 0) {
+    await invalidateDashboardCache("subscription_auto_expired");
+  }
 }
 
 async function ensureNoActiveOverlap(userId: string, startDate: Date, endDate: Date): Promise<void> {

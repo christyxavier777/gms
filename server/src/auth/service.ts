@@ -6,6 +6,7 @@ import { LoginInput, RegisterInput } from "./schemas";
 import { SafeUser } from "./types";
 import { env } from "../config/env";
 import { createSession } from "./session";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 const prisma = createPrismaClient();
 
@@ -68,6 +69,7 @@ export async function registerUser(input: RegisterInput): Promise<SafeUser> {
     },
   });
 
+  await invalidateDashboardCache("user_registered");
   return toSafeUser(user);
 }
 
