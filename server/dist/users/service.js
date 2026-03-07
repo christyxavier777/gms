@@ -9,19 +9,20 @@ exports.canReadUser = canReadUser;
 const client_1 = require("@prisma/client");
 const client_2 = require("../prisma/client");
 const http_error_1 = require("../middleware/http-error");
+const cache_1 = require("../dashboard/cache");
 const prisma = (0, client_2.createPrismaClient)();
 function toSafeUser(user) {
     return {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         status: user.status,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
     };
 }
-// Returns a paginated list of users for ADMIN-only management views.
 async function listUsers(page, pageSize) {
     const skip = (page - 1) * pageSize;
     const [rows, total] = await prisma.$transaction([
@@ -42,7 +43,6 @@ async function listUsers(page, pageSize) {
         },
     };
 }
-// Reads a single user profile in safe response form.
 async function getUserById(id) {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
@@ -50,13 +50,13 @@ async function getUserById(id) {
     }
     return toSafeUser(user);
 }
-// Updates only lifecycle status for a user.
 async function updateUserStatus(id, status) {
     try {
         const user = await prisma.user.update({
             where: { id },
             data: { status },
         });
+        await (0, cache_1.invalidateDashboardCache)("user_status_updated");
         return toSafeUser(user);
     }
     catch (error) {
@@ -66,10 +66,10 @@ async function updateUserStatus(id, status) {
         throw error;
     }
 }
-// Hard-deletes a user account by identifier.
 async function deleteUser(id) {
     try {
         await prisma.user.delete({ where: { id } });
+        await (0, cache_1.invalidateDashboardCache)("user_deleted");
     }
     catch (error) {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
@@ -78,12 +78,14 @@ async function deleteUser(id) {
         throw error;
     }
 }
-// Phase 2 stub: trainer-to-member assignment check intentionally unimplemented.
-function trainerCanReadMember(_trainerId, _memberId) {
-    return false;
+async function trainerCanReadMember(trainerId, memberId) {
+    const assignment = await prisma.trainerMemberAssignment.findFirst({
+        where: { trainerId, memberId, active: true },
+        select: { id: true },
+    });
+    return Boolean(assignment);
 }
-// Enforces view access for /users/:id according to Phase 2 constraints.
-function canReadUser(requester, targetUserId) {
+async function canReadUser(requester, targetUserId) {
     if (requester.role === client_1.Role.ADMIN)
         return true;
     if (requester.userId === targetUserId)

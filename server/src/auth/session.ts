@@ -1,14 +1,20 @@
 import crypto from "crypto";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
+import { cacheGet, cacheSet } from "../cache/client";
 
 const prisma = createPrismaClient();
 
 const SESSION_COOKIE = "gms_session";
 const SESSION_TTL_DAYS = 7;
+const SESSION_REVOKE_PREFIX = "session:revoked:";
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function revokedCacheKey(tokenHash: string): string {
+  return `${SESSION_REVOKE_PREFIX}${tokenHash}`;
 }
 
 function parseCookieHeader(cookieHeader: string | undefined): Record<string, string> {
@@ -57,12 +63,21 @@ export async function createSession(params: {
 
 export async function validateSession(sessionToken: string): Promise<{ userId: string; role: string }> {
   const tokenHash = hashToken(sessionToken);
+  const revokedCached = await cacheGet(revokedCacheKey(tokenHash));
+  if (revokedCached === "1") {
+    throw new HttpError(401, "INVALID_SESSION", "Session is invalid or expired");
+  }
+
   const session = await prisma.session.findUnique({
     where: { tokenHash },
     include: { user: true },
   });
 
   if (!session || session.revokedAt || session.expiresAt <= new Date()) {
+    if (session?.revokedAt) {
+      const ttlSec = Math.max(60, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
+      await cacheSet(revokedCacheKey(tokenHash), "1", ttlSec);
+    }
     throw new HttpError(401, "INVALID_SESSION", "Session is invalid or expired");
   }
 
@@ -75,8 +90,18 @@ export async function validateSession(sessionToken: string): Promise<{ userId: s
 
 export async function revokeSession(sessionToken: string): Promise<void> {
   const tokenHash = hashToken(sessionToken);
+  const existing = await prisma.session.findUnique({
+    where: { tokenHash },
+    select: { expiresAt: true, revokedAt: true },
+  });
+
   await prisma.session.updateMany({
     where: { tokenHash, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+
+  if (existing) {
+    const ttlSec = Math.max(60, Math.floor((existing.expiresAt.getTime() - Date.now()) / 1000));
+    await cacheSet(revokedCacheKey(tokenHash), "1", ttlSec);
+  }
 }

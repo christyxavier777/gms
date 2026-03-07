@@ -7,6 +7,8 @@ exports.deleteProgressEntry = deleteProgressEntry;
 const client_1 = require("@prisma/client");
 const client_2 = require("../prisma/client");
 const http_error_1 = require("../middleware/http-error");
+const bmi_1 = require("./bmi");
+const cache_1 = require("../dashboard/cache");
 const prisma = (0, client_2.createPrismaClient)();
 function toSafeProgress(progress) {
     return {
@@ -14,13 +16,26 @@ function toSafeProgress(progress) {
         userId: progress.userId,
         recordedById: progress.recordedById,
         weight: progress.weight,
+        height: progress.height,
         bodyFat: progress.bodyFat,
         bmi: progress.bmi,
+        dietCategory: progress.dietCategory,
         notes: progress.notes,
         recordedAt: progress.recordedAt,
         createdAt: progress.createdAt,
         updatedAt: progress.updatedAt,
     };
+}
+async function assignDietPlanFromBmi(requester, memberUserId, category) {
+    const template = (0, bmi_1.getDietTemplate)(category);
+    await prisma.dietPlan.create({
+        data: {
+            title: template.title,
+            description: template.description,
+            createdById: requester.userId,
+            assignedToId: memberUserId,
+        },
+    });
 }
 async function assertMemberUser(userId) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -33,25 +48,22 @@ async function assertMemberUser(userId) {
     return user;
 }
 async function isTrainerAssignedMember(trainerId, memberId) {
-    const [workoutAssigned, dietAssigned] = await prisma.$transaction([
+    const [workoutAssigned, dietAssigned, mappedAssignment] = await prisma.$transaction([
         prisma.workoutPlan.findFirst({
-            where: {
-                createdById: trainerId,
-                assignedToId: memberId,
-            },
+            where: { createdById: trainerId, assignedToId: memberId },
             select: { id: true },
         }),
         prisma.dietPlan.findFirst({
-            where: {
-                createdById: trainerId,
-                assignedToId: memberId,
-            },
+            where: { createdById: trainerId, assignedToId: memberId },
+            select: { id: true },
+        }),
+        prisma.trainerMemberAssignment.findFirst({
+            where: { trainerId, memberId, active: true },
             select: { id: true },
         }),
     ]);
-    return Boolean(workoutAssigned || dietAssigned);
+    return Boolean(workoutAssigned || dietAssigned || mappedAssignment);
 }
-// Creates a progress entry for a member by ADMIN or TRAINER.
 async function createProgressEntry(requester, payload) {
     if (requester.role !== client_1.Role.ADMIN && requester.role !== client_1.Role.TRAINER) {
         throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to create progress entries");
@@ -63,27 +75,37 @@ async function createProgressEntry(requester, payload) {
             throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to record progress for this member");
         }
     }
+    const derivedBmi = payload.weight !== undefined &&
+        payload.weight !== null &&
+        payload.height !== undefined &&
+        payload.height !== null
+        ? (0, bmi_1.calculateBmi)(payload.weight, payload.height)
+        : null;
+    const bmiToStore = derivedBmi ?? payload.bmi ?? null;
+    const category = bmiToStore ? (0, bmi_1.categorizeBmi)(bmiToStore) : null;
     const created = await prisma.progress.create({
         data: {
             userId: payload.userId,
             recordedById: requester.userId,
             weight: payload.weight ?? null,
+            height: payload.height ?? null,
             bodyFat: payload.bodyFat ?? null,
-            bmi: payload.bmi ?? null,
+            bmi: bmiToStore,
+            dietCategory: category,
             notes: payload.notes ?? null,
             recordedAt: payload.recordedAt,
         },
     });
+    if (category) {
+        await assignDietPlanFromBmi(requester, payload.userId, category);
+    }
+    await (0, cache_1.invalidateDashboardCache)("progress_created");
     return toSafeProgress(created);
 }
-// Returns all progress entries for ADMIN, newest first.
 async function listAllProgress() {
-    const rows = await prisma.progress.findMany({
-        orderBy: { recordedAt: "desc" },
-    });
+    const rows = await prisma.progress.findMany({ orderBy: { recordedAt: "desc" } });
     return rows.map(toSafeProgress);
 }
-// Returns progress entries by member with role-based access checks.
 async function getProgressByUserId(requester, memberUserId) {
     await assertMemberUser(memberUserId);
     if (requester.role === client_1.Role.MEMBER && requester.userId !== memberUserId) {
@@ -101,10 +123,10 @@ async function getProgressByUserId(requester, memberUserId) {
     });
     return rows.map(toSafeProgress);
 }
-// Hard-deletes one progress entry (ADMIN correction flow).
 async function deleteProgressEntry(progressId) {
     try {
         await prisma.progress.delete({ where: { id: progressId } });
+        await (0, cache_1.invalidateDashboardCache)("progress_deleted");
     }
     catch (error) {
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === "P2025") {

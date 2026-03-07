@@ -2,6 +2,7 @@ import { Prisma, Role, User, WorkoutPlan } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { SafePlan } from "./types";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 const prisma = createPrismaClient();
 
@@ -57,6 +58,7 @@ export async function createWorkoutPlan(
     },
   });
 
+  await invalidateDashboardCache("workout_plan_created");
   return toSafeWorkoutPlan(plan);
 }
 
@@ -113,6 +115,7 @@ export async function updateWorkoutPlan(
     },
   });
 
+  await invalidateDashboardCache("workout_plan_updated_or_assigned");
   return toSafeWorkoutPlan(updated);
 }
 
@@ -129,6 +132,7 @@ export async function deleteWorkoutPlan(
     throw new HttpError(403, "FORBIDDEN", "You are not allowed to delete this workout plan");
   }
   await prisma.workoutPlan.delete({ where: { id: planId } });
+  await invalidateDashboardCache("workout_plan_deleted");
 }
 
 // Assigns/reassigns one workout plan to one member.
@@ -151,7 +155,10 @@ export async function assignWorkoutPlan(
     where: { id: planId },
     data: { assignedToId: memberId },
   });
+  await invalidateDashboardCache("workout_plan_updated_or_assigned");
   return toSafeWorkoutPlan(updated);
 }
+
+
 
 

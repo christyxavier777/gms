@@ -9,8 +9,9 @@ const zod_1 = require("zod");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const env_1 = require("../config/env");
 const http_error_1 = require("./http-error");
+const logger_1 = require("../utils/logger");
 // Final error boundary for unhandled application errors.
-function errorHandlerMiddleware(err, _req, res, _next) {
+function errorHandlerMiddleware(err, req, res, _next) {
     if (err && typeof err === "object" && "type" in err && err.type === "entity.too.large") {
         res.status(413).json({
             error: {
@@ -69,6 +70,16 @@ function errorHandlerMiddleware(err, _req, res, _next) {
         return;
     }
     if (err instanceof http_error_1.HttpError) {
+        if (err.status >= 500) {
+            (0, logger_1.logError)("http_error", {
+                requestId: req.requestId,
+                code: err.code,
+                status: err.status,
+                message: err.message,
+                path: req.originalUrl,
+                method: req.method,
+            });
+        }
         res.status(err.status).json({
             error: {
                 code: err.code,
@@ -79,10 +90,20 @@ function errorHandlerMiddleware(err, _req, res, _next) {
         return;
     }
     if (env_1.env.nodeEnv !== "production") {
+        (0, logger_1.logError)("http_error_unhandled", {
+            requestId: req.requestId,
+            path: req.originalUrl,
+            method: req.method,
+            error: err instanceof Error ? err.message : "unknown",
+        });
         console.error("[error]", err);
     }
     else {
-        console.error("[error] unexpected server error");
+        (0, logger_1.logError)("http_error_unhandled", {
+            requestId: req.requestId,
+            path: req.originalUrl,
+            method: req.method,
+        });
     }
     res.status(500).json({
         error: {

@@ -4,11 +4,12 @@ import { ZodError } from "zod";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { HttpError } from "./http-error";
+import { logError } from "../utils/logger";
 
 // Final error boundary for unhandled application errors.
 export function errorHandlerMiddleware(
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
@@ -76,6 +77,16 @@ export function errorHandlerMiddleware(
   }
 
   if (err instanceof HttpError) {
+    if (err.status >= 500) {
+      logError("http_error", {
+        requestId: req.requestId,
+        code: err.code,
+        status: err.status,
+        message: err.message,
+        path: req.originalUrl,
+        method: req.method,
+      });
+    }
     res.status(err.status).json({
       error: {
         code: err.code,
@@ -87,9 +98,19 @@ export function errorHandlerMiddleware(
   }
 
   if (env.nodeEnv !== "production") {
+    logError("http_error_unhandled", {
+      requestId: req.requestId,
+      path: req.originalUrl,
+      method: req.method,
+      error: err instanceof Error ? err.message : "unknown",
+    });
     console.error("[error]", err);
   } else {
-    console.error("[error] unexpected server error");
+    logError("http_error_unhandled", {
+      requestId: req.requestId,
+      path: req.originalUrl,
+      method: req.method,
+    });
   }
 
   res.status(500).json({

@@ -30,7 +30,7 @@ exports.usersRouter.get("/users/:id", require_auth_1.requireAuth, async (req, re
         if (!req.auth) {
             throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "Authentication is required");
         }
-        const allowed = (0, service_1.canReadUser)(req.auth, params.id);
+        const allowed = await (0, service_1.canReadUser)(req.auth, params.id);
         if (!allowed) {
             throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to access this resource");
         }

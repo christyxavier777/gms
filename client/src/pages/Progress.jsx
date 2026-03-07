@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
@@ -9,7 +9,7 @@ function toDateTimeLocalValue(value) {
     const timezoneOffsetMs = date.getTimezoneOffset() * 60000
     const localDate = new Date(date.getTime() - timezoneOffsetMs)
     return localDate.toISOString().slice(0, 16)
-  } catch (_error) {
+  } catch {
     return ''
   }
 }
@@ -17,7 +17,7 @@ function toDateTimeLocalValue(value) {
 function formatDateTime(value) {
   try {
     return new Date(value).toLocaleString()
-  } catch (_error) {
+  } catch {
     return value
   }
 }
@@ -63,7 +63,7 @@ export default function Progress() {
 
   const effectiveMemberId = isMember ? user?.id || '' : memberUserId
 
-  const loadProgress = async (targetMemberId = effectiveMemberId) => {
+  const loadProgress = useCallback(async (targetMemberId = effectiveMemberId) => {
     if (!token) return
     try {
       setLoading(true)
@@ -92,11 +92,11 @@ export default function Progress() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token, isAdmin, effectiveMemberId])
 
   useEffect(() => {
     loadProgress()
-  }, [token, user?.role, user?.id])
+  }, [loadProgress])
 
   const handleCreate = async (e) => {
     e.preventDefault()

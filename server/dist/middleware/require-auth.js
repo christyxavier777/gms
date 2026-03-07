@@ -6,12 +6,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAuth = requireAuth;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt_1 = require("../auth/jwt");
+const session_1 = require("../auth/session");
 const http_error_1 = require("./http-error");
-// Ensures a valid Bearer token is present and attaches auth context to request.
-function requireAuth(req, _res, next) {
+// Ensures a valid session cookie or fallback bearer token is present.
+async function requireAuth(req, _res, next) {
+    const sessionToken = (0, session_1.extractSessionToken)(req.header("cookie"));
+    if (sessionToken) {
+        const auth = await (0, session_1.validateSession)(sessionToken);
+        req.auth = { userId: auth.userId, role: auth.role };
+        next();
+        return;
+    }
     const authorizationHeader = req.header("authorization");
     if (!authorizationHeader) {
-        throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "Authorization header is required");
+        throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "A valid session is required");
     }
     const [scheme, token] = authorizationHeader.split(" ");
     if (scheme !== "Bearer" || !token) {

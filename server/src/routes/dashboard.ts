@@ -6,20 +6,39 @@ import { requireAuth } from "../middleware/require-auth";
 import { requireRole } from "../middleware/require-role";
 import { recentLimitQuerySchema } from "../dashboard/schemas";
 import { getAdminDashboard, getMemberDashboard, getTrainerDashboard } from "../dashboard/service";
+import { buildDashboardCacheKey, getDashboardCache, setDashboardCache } from "../dashboard/cache";
+import { getPerformanceSnapshot } from "../observability/perf-metrics";
 
 // Read-only role-specific dashboard endpoints.
 export const dashboardRouter = Router();
 
 dashboardRouter.get("/dashboard/admin", requireAuth, requireRole(Role.ADMIN), async (_req, res) => {
-  const dashboard = await getAdminDashboard();
+  const cacheKey = buildDashboardCacheKey("admin", "global");
+  const cached = await getDashboardCache<Awaited<ReturnType<typeof getAdminDashboard>>>(cacheKey);
+  const dashboard = cached ?? (await getAdminDashboard());
+  if (!cached) {
+    await setDashboardCache(cacheKey, dashboard);
+  }
   res.status(200).json({ dashboard });
+});
+
+dashboardRouter.get("/dashboard/admin/performance", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+  const requestedLimit = Number(req.query.limit ?? 30);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 30;
+  const metrics = getPerformanceSnapshot(limit);
+  res.status(200).json({ metrics });
 });
 
 dashboardRouter.get("/dashboard/trainer", requireAuth, requireRole(Role.TRAINER), async (req, res) => {
   try {
     if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
     const query = recentLimitQuerySchema.parse(req.query);
-    const dashboard = await getTrainerDashboard(req.auth.userId, query.limit);
+    const cacheKey = buildDashboardCacheKey("trainer", req.auth.userId, query.limit);
+    const cached = await getDashboardCache<Awaited<ReturnType<typeof getTrainerDashboard>>>(cacheKey);
+    const dashboard = cached ?? (await getTrainerDashboard(req.auth.userId, query.limit));
+    if (!cached) {
+      await setDashboardCache(cacheKey, dashboard);
+    }
     res.status(200).json({ dashboard });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -33,7 +52,12 @@ dashboardRouter.get("/dashboard/member", requireAuth, requireRole(Role.MEMBER), 
   try {
     if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
     const query = recentLimitQuerySchema.parse(req.query);
-    const dashboard = await getMemberDashboard(req.auth.userId, query.limit);
+    const cacheKey = buildDashboardCacheKey("member", req.auth.userId, query.limit);
+    const cached = await getDashboardCache<Awaited<ReturnType<typeof getMemberDashboard>>>(cacheKey);
+    const dashboard = cached ?? (await getMemberDashboard(req.auth.userId, query.limit));
+    if (!cached) {
+      await setDashboardCache(cacheKey, dashboard);
+    }
     res.status(200).json({ dashboard });
   } catch (error) {
     if (error instanceof ZodError) {

@@ -6,7 +6,7 @@ import { api } from '../services/api'
 function formatDate(date) {
   try {
     return new Date(date).toLocaleString()
-  } catch (_error) {
+  } catch {
     return date
   }
 }

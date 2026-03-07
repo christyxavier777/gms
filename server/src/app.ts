@@ -6,6 +6,8 @@ import { errorHandlerMiddleware } from "./middleware/error-handler";
 import { sanitizeInputMiddleware } from "./middleware/sanitize-input";
 import { requestLoggerMiddleware } from "./middleware/request-logger";
 import { authRateLimiter, mutationRateLimiter } from "./middleware/rate-limit";
+import { requestIdMiddleware } from "./middleware/request-id";
+import { performanceMetricsMiddleware } from "./middleware/perf-metrics";
 
 const helmet = require("helmet");
 
@@ -14,6 +16,7 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  app.use(requestIdMiddleware);
   app.use((req, res, next) => {
     const origin = req.header("origin");
     const allowedOrigins = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
@@ -24,7 +27,7 @@ export function createApp() {
       res.header("Access-Control-Allow-Credentials", "true");
     }
 
-    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-Id");
     res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
 
     if (req.method === "OPTIONS") {
@@ -39,6 +42,7 @@ export function createApp() {
       crossOriginResourcePolicy: { policy: "same-site" },
     }),
   );
+  app.use(performanceMetricsMiddleware);
   app.use(requestLoggerMiddleware);
   app.use(express.json({ limit: env.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: false, limit: env.jsonBodyLimit }));

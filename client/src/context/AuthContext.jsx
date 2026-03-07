@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useContext, useEffect } from 'react'
 import { api } from '../services/api'
 
@@ -25,7 +26,7 @@ export function AuthProvider({ children }) {
         const data = await api.me()
         setUser({ ...data.user, role: normalizeRole(data.user?.role) })
         setToken('cookie-session')
-      } catch (_error) {
+      } catch {
         setUser(null)
         setToken(null)
       } finally {
@@ -52,7 +53,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       await api.logout()
-    } catch (_error) {
+    } catch {
       // noop
     }
     setUser(null)

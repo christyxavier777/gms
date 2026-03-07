@@ -3,6 +3,7 @@ import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { trainerCanReadMember } from "../users/service";
 import { SafeSubscription } from "./types";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 const prisma = createPrismaClient();
 
@@ -99,6 +100,7 @@ export async function createSubscription(input: {
     },
   });
 
+  await invalidateDashboardCache("subscription_created");
   return toSafeSubscription(subscription);
 }
 
@@ -149,6 +151,7 @@ export async function cancelSubscription(id: string): Promise<SafeSubscription> 
       where: { id },
       data: { status: SubscriptionStatus.CANCELLED },
     });
+    await invalidateDashboardCache("subscription_cancelled");
     return toSafeSubscription(updated);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
@@ -157,5 +160,7 @@ export async function cancelSubscription(id: string): Promise<SafeSubscription> 
     throw error;
   }
 }
+
+
 
 

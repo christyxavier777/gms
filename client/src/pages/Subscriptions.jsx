@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
@@ -12,7 +12,7 @@ const PLAN_CATALOG = [
 function toInputDate(value) {
   try {
     return new Date(value).toISOString().slice(0, 10)
-  } catch (_error) {
+  } catch {
     return ''
   }
 }
@@ -45,7 +45,7 @@ export default function Subscriptions() {
     endDate: addDays(today, PLAN_CATALOG[0].durationDays),
   })
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!token) return
     try {
       setLoading(true)
@@ -58,9 +58,9 @@ export default function Subscriptions() {
         const memberUsers = (usersData.users || []).filter((u) => u.role === 'MEMBER')
         setMembers(memberUsers)
         setSubscriptions(subData.subscriptions || [])
-        if (!form.userId && memberUsers.length > 0) {
-          setForm((prev) => ({ ...prev, userId: memberUsers[0].id }))
-        }
+        setForm((prev) =>
+          !prev.userId && memberUsers.length > 0 ? { ...prev, userId: memberUsers[0].id } : prev,
+        )
       } else if (isMember) {
         const data = await api.getMySubscription(token)
         setMySubscription(data.subscription || null)
@@ -70,11 +70,11 @@ export default function Subscriptions() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token, isAdmin, isMember])
 
   useEffect(() => {
     loadData()
-  }, [token, user?.role])
+  }, [loadData])
 
   const hasLiveAdminData = subscriptions.length > 0
   const demoSubscriptions = [

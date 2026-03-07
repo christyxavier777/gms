@@ -2,6 +2,7 @@ import { Prisma, Role, User, DietPlan } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { SafePlan } from "./types";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 const prisma = createPrismaClient();
 
@@ -57,6 +58,7 @@ export async function createDietPlan(
     },
   });
 
+  await invalidateDashboardCache("diet_plan_created");
   return toSafeDietPlan(plan);
 }
 
@@ -113,6 +115,7 @@ export async function updateDietPlan(
     },
   });
 
+  await invalidateDashboardCache("diet_plan_updated_or_assigned");
   return toSafeDietPlan(updated);
 }
 
@@ -129,6 +132,7 @@ export async function deleteDietPlan(
     throw new HttpError(403, "FORBIDDEN", "You are not allowed to delete this diet plan");
   }
   await prisma.dietPlan.delete({ where: { id: planId } });
+  await invalidateDashboardCache("diet_plan_deleted");
 }
 
 // Assigns/reassigns one diet plan to one member.
@@ -151,7 +155,10 @@ export async function assignDietPlan(
     where: { id: planId },
     data: { assignedToId: memberId },
   });
+  await invalidateDashboardCache("diet_plan_updated_or_assigned");
   return toSafeDietPlan(updated);
 }
+
+
 
 

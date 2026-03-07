@@ -10,6 +10,7 @@ const client_1 = require("@prisma/client");
 const client_2 = require("../prisma/client");
 const http_error_1 = require("../middleware/http-error");
 const service_1 = require("../users/service");
+const cache_1 = require("../dashboard/cache");
 const prisma = (0, client_2.createPrismaClient)();
 function startOfDay(date) {
     return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -87,6 +88,7 @@ async function createSubscription(input) {
             status: client_1.SubscriptionStatus.ACTIVE,
         },
     });
+    await (0, cache_1.invalidateDashboardCache)("subscription_created");
     return toSafeSubscription(subscription);
 }
 // Returns all subscriptions for admin management.
@@ -105,7 +107,7 @@ async function getSubscriptionById(requester, id) {
         throw new http_error_1.HttpError(404, "SUBSCRIPTION_NOT_FOUND", "Subscription not found");
     }
     const isOwner = subscription.userId === requester.userId;
-    const trainerAllowed = requester.role === client_1.Role.TRAINER && (0, service_1.trainerCanReadMember)(requester.userId, subscription.userId);
+    const trainerAllowed = requester.role === client_1.Role.TRAINER && (await (0, service_1.trainerCanReadMember)(requester.userId, subscription.userId));
     if (requester.role !== client_1.Role.ADMIN && !isOwner && !trainerAllowed) {
         throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to access this subscription");
     }
@@ -127,6 +129,7 @@ async function cancelSubscription(id) {
             where: { id },
             data: { status: client_1.SubscriptionStatus.CANCELLED },
         });
+        await (0, cache_1.invalidateDashboardCache)("subscription_cancelled");
         return toSafeSubscription(updated);
     }
     catch (error) {

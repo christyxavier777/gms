@@ -16,6 +16,7 @@ async function seedAdmin() {
             data: {
                 name: env_1.env.adminSeed.name,
                 role: client_1.Role.ADMIN,
+                phone: env_1.env.adminSeed.phone,
                 passwordHash,
             },
         });
@@ -27,6 +28,7 @@ async function seedAdmin() {
             data: {
                 name: env_1.env.adminSeed.name,
                 email,
+                phone: env_1.env.adminSeed.phone,
                 passwordHash,
                 role: client_1.Role.ADMIN,
             },

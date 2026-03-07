@@ -1,20 +1,32 @@
 import { createApp } from "./app";
 import { env } from "./config/env";
 import { createPrismaClient } from "./prisma/client";
+import { logInfo } from "./utils/logger";
+import { logCacheUnavailableIfNeeded } from "./cache/client";
+import { logPerformanceSummaryAndReset } from "./observability/perf-metrics";
 
 const app = createApp();
 void createPrismaClient;
+logCacheUnavailableIfNeeded();
 
 const server = app.listen(env.port, () => {
-  console.log(`[bootstrap] environment loaded: NODE_ENV=${env.nodeEnv}`);
-  console.log(`[bootstrap] prisma client generation validated (Phase 0, no DB connection)`);
-  console.log(`[bootstrap] server listening on http://localhost:${env.port}`);
+  logInfo("bootstrap", {
+    nodeEnv: env.nodeEnv,
+    port: env.port,
+    message: "server_started",
+  });
 });
 
+const perfTimer = setInterval(() => {
+  logPerformanceSummaryAndReset();
+}, 60_000);
+perfTimer.unref();
+
 process.on("SIGTERM", () => {
-  console.log("[shutdown] SIGTERM received, closing resources");
+  logInfo("shutdown", { signal: "SIGTERM", message: "closing_server" });
+  clearInterval(perfTimer);
   server.close(() => {
-    console.log("[shutdown] server stopped cleanly");
+    logInfo("shutdown", { message: "server_stopped_cleanly" });
     process.exit(0);
   });
 });

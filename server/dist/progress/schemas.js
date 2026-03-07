@@ -6,6 +6,7 @@ exports.createProgressSchema = zod_1.z
     .object({
     userId: zod_1.z.string().uuid("userId must be a valid UUID"),
     weight: zod_1.z.number().positive().nullable().optional(),
+    height: zod_1.z.number().positive().nullable().optional(),
     bodyFat: zod_1.z.number().min(0).max(100).nullable().optional(),
     bmi: zod_1.z.number().positive().nullable().optional(),
     notes: zod_1.z.string().trim().max(2000).nullable().optional(),
@@ -13,6 +14,7 @@ exports.createProgressSchema = zod_1.z
 })
     .strict()
     .refine((payload) => payload.weight !== undefined ||
+    payload.height !== undefined ||
     payload.bodyFat !== undefined ||
     payload.bmi !== undefined ||
     (payload.notes !== undefined && payload.notes !== null && payload.notes.trim().length > 0), {
@@ -21,6 +23,10 @@ exports.createProgressSchema = zod_1.z
     .refine((payload) => payload.recordedAt <= new Date(), {
     message: "recordedAt cannot be in the future",
     path: ["recordedAt"],
+})
+    .refine((payload) => payload.height === undefined || payload.height === null || payload.height <= 2.6, {
+    message: "height must be in meters (for example: 1.75)",
+    path: ["height"],
 });
 exports.progressIdParamSchema = zod_1.z.object({
     id: zod_1.z.string().uuid("Progress id must be a valid UUID"),

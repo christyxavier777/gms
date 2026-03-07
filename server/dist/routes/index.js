@@ -11,6 +11,7 @@ const diet_plans_1 = require("./diet-plans");
 const subscriptions_1 = require("./subscriptions");
 const progress_1 = require("./progress");
 const dashboard_1 = require("./dashboard");
+const payments_1 = require("./payments");
 // Registers all application routes in one place.
 exports.routes = (0, express_1.Router)();
 exports.routes.use(health_1.healthRouter);
@@ -22,4 +23,5 @@ exports.routes.use(diet_plans_1.dietPlansRouter);
 exports.routes.use(subscriptions_1.subscriptionsRouter);
 exports.routes.use(progress_1.progressRouter);
 exports.routes.use(dashboard_1.dashboardRouter);
+exports.routes.use(payments_1.paymentsRouter);
 //# sourceMappingURL=index.js.map

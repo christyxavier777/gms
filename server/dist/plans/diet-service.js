@@ -9,6 +9,7 @@ exports.assignDietPlan = assignDietPlan;
 const client_1 = require("@prisma/client");
 const client_2 = require("../prisma/client");
 const http_error_1 = require("../middleware/http-error");
+const cache_1 = require("../dashboard/cache");
 const prisma = (0, client_2.createPrismaClient)();
 function toSafeDietPlan(plan) {
     return {
@@ -58,6 +59,7 @@ async function createDietPlan(requester, payload) {
             createdById: requester.userId,
         },
     });
+    await (0, cache_1.invalidateDashboardCache)("diet_plan_created");
     return toSafeDietPlan(plan);
 }
 // Lists diet plans scoped to the caller role.
@@ -102,6 +104,7 @@ async function updateDietPlan(requester, planId, payload) {
             ...(payload.description !== undefined ? { description: payload.description } : {}),
         },
     });
+    await (0, cache_1.invalidateDashboardCache)("diet_plan_updated_or_assigned");
     return toSafeDietPlan(updated);
 }
 // Hard-deletes diet plans under ownership/admin constraints.
@@ -114,6 +117,7 @@ async function deleteDietPlan(requester, planId) {
         throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to delete this diet plan");
     }
     await prisma.dietPlan.delete({ where: { id: planId } });
+    await (0, cache_1.invalidateDashboardCache)("diet_plan_deleted");
 }
 // Assigns/reassigns one diet plan to one member.
 async function assignDietPlan(requester, planId, memberId) {
@@ -121,14 +125,15 @@ async function assignDietPlan(requester, planId, memberId) {
     if (!plan) {
         throw new http_error_1.HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
     }
-    if (!canManageDietPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to assign this diet plan");
+    if (requester.role !== client_1.Role.ADMIN) {
+        throw new http_error_1.HttpError(403, "FORBIDDEN", "Only admins can assign diet plans");
     }
     await assertAssignableMember(memberId);
     const updated = await prisma.dietPlan.update({
         where: { id: planId },
         data: { assignedToId: memberId },
     });
+    await (0, cache_1.invalidateDashboardCache)("diet_plan_updated_or_assigned");
     return toSafeDietPlan(updated);
 }
 //# sourceMappingURL=diet-service.js.map

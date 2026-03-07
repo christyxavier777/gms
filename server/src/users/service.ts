@@ -2,6 +2,7 @@ import { Prisma, Role, User, UserStatus } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { SafeUser } from "../auth/types";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 const prisma = createPrismaClient();
 
@@ -57,6 +58,7 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
       where: { id },
       data: { status },
     });
+    await invalidateDashboardCache("user_status_updated");
     return toSafeUser(user);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
@@ -69,6 +71,7 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
 export async function deleteUser(id: string): Promise<void> {
   try {
     await prisma.user.delete({ where: { id } });
+    await invalidateDashboardCache("user_deleted");
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       throw new HttpError(404, "USER_NOT_FOUND", "User not found");
@@ -94,3 +97,5 @@ export async function canReadUser(
   if (requester.role === Role.TRAINER) return trainerCanReadMember(requester.userId, targetUserId);
   return false;
 }
+
+

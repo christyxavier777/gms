@@ -9,6 +9,7 @@ exports.assignWorkoutPlan = assignWorkoutPlan;
 const client_1 = require("@prisma/client");
 const client_2 = require("../prisma/client");
 const http_error_1 = require("../middleware/http-error");
+const cache_1 = require("../dashboard/cache");
 const prisma = (0, client_2.createPrismaClient)();
 function toSafeWorkoutPlan(plan) {
     return {
@@ -58,6 +59,7 @@ async function createWorkoutPlan(requester, payload) {
             createdById: requester.userId,
         },
     });
+    await (0, cache_1.invalidateDashboardCache)("workout_plan_created");
     return toSafeWorkoutPlan(plan);
 }
 // Lists workout plans scoped to the caller role.
@@ -102,6 +104,7 @@ async function updateWorkoutPlan(requester, planId, payload) {
             ...(payload.description !== undefined ? { description: payload.description } : {}),
         },
     });
+    await (0, cache_1.invalidateDashboardCache)("workout_plan_updated_or_assigned");
     return toSafeWorkoutPlan(updated);
 }
 // Hard-deletes workout plans under ownership/admin constraints.
@@ -114,6 +117,7 @@ async function deleteWorkoutPlan(requester, planId) {
         throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to delete this workout plan");
     }
     await prisma.workoutPlan.delete({ where: { id: planId } });
+    await (0, cache_1.invalidateDashboardCache)("workout_plan_deleted");
 }
 // Assigns/reassigns one workout plan to one member.
 async function assignWorkoutPlan(requester, planId, memberId) {
@@ -121,14 +125,15 @@ async function assignWorkoutPlan(requester, planId, memberId) {
     if (!plan) {
         throw new http_error_1.HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
     }
-    if (!canManageWorkoutPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to assign this workout plan");
+    if (requester.role !== client_1.Role.ADMIN) {
+        throw new http_error_1.HttpError(403, "FORBIDDEN", "Only admins can assign workout plans");
     }
     await assertAssignableMember(memberId);
     const updated = await prisma.workoutPlan.update({
         where: { id: planId },
         data: { assignedToId: memberId },
     });
+    await (0, cache_1.invalidateDashboardCache)("workout_plan_updated_or_assigned");
     return toSafeWorkoutPlan(updated);
 }
 //# sourceMappingURL=workout-service.js.map

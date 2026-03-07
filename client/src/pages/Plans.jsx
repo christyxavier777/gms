@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
@@ -24,7 +24,7 @@ export default function Plans() {
   const [workoutAssign, setWorkoutAssign] = useState({})
   const [dietAssign, setDietAssign] = useState({})
 
-  const loadPlans = async () => {
+  const loadPlans = useCallback(async () => {
     if (!token) return
     try {
       setLoading(true)
@@ -48,11 +48,11 @@ export default function Plans() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token, isAdmin])
 
   useEffect(() => {
     loadPlans()
-  }, [token, isAdmin])
+  }, [loadPlans])
 
   const hasLiveData = workoutPlans.length > 0 || dietPlans.length > 0
   const demoWorkoutPlans = [

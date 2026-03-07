@@ -3,6 +3,7 @@ import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { SafeProgress } from "./types";
 import { calculateBmi, categorizeBmi, getDietTemplate } from "./bmi";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 const prisma = createPrismaClient();
 
@@ -125,6 +126,7 @@ export async function createProgressEntry(
     await assignDietPlanFromBmi(requester, payload.userId, category);
   }
 
+  await invalidateDashboardCache("progress_created");
   return toSafeProgress(created);
 }
 
@@ -160,6 +162,7 @@ export async function getProgressByUserId(
 export async function deleteProgressEntry(progressId: string): Promise<void> {
   try {
     await prisma.progress.delete({ where: { id: progressId } });
+    await invalidateDashboardCache("progress_deleted");
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       throw new HttpError(404, "PROGRESS_NOT_FOUND", "Progress entry not found");
@@ -167,6 +170,8 @@ export async function deleteProgressEntry(progressId: string): Promise<void> {
     throw error;
   }
 }
+
+
 
 
 
