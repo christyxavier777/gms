@@ -124,9 +124,16 @@ Baseline dashboard concurrency and compare against SLO thresholds:
 npm run loadtest:dashboard:100
 ```
 
+One-step authenticated run (uses `ADMIN_EMAIL` + `ADMIN_PASSWORD`, auto-logs in, uses session cookie):
+
+```bash
+npm run loadtest:dashboard:auth:100
+```
+
 Recommended environment variables before running:
 
 - `LOADTEST_BEARER_TOKEN`: Admin JWT token for `/dashboard/admin/performance`
+- `LOADTEST_SESSION_COOKIE`: Optional precomputed session cookie (e.g., `gms_session=...`)
 - `LOADTEST_BASE_URL`: Target base URL (default `http://127.0.0.1:4000`)
 - `LOADTEST_ENDPOINT`: Endpoint path (default `/dashboard/admin/performance`)
 - `LOADTEST_ENFORCE_SLO`: Set `true` to exit non-zero when SLO is breached

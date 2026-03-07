@@ -1,12 +1,13 @@
 import autocannon, { Result } from "autocannon";
 
-type Args = {
+export type DashboardLoadTestArgs = {
   url: string;
   endpoint: string;
   connections: number;
   durationSec: number;
   pipelining: number;
   token: string;
+  sessionCookie: string;
   sloLatencyP95Ms: number;
   sloErrorRatePct: number;
   enforceSlo: boolean;
@@ -38,13 +39,14 @@ function toBool(value: string | undefined, fallback: boolean): boolean {
   return normalized === "1" || normalized === "true" || normalized === "yes";
 }
 
-function parseArgs(): Args {
+export function parseDashboardLoadTestArgsFromProcess(): DashboardLoadTestArgs {
   const url = argValue("--url") ?? process.env.LOADTEST_BASE_URL ?? "http://127.0.0.1:4000";
   const endpoint = argValue("--endpoint") ?? process.env.LOADTEST_ENDPOINT ?? "/dashboard/admin/performance";
   const connections = toPositiveInt(argValue("--connections") ?? process.env.LOADTEST_CONNECTIONS, 100);
   const durationSec = toPositiveInt(argValue("--duration") ?? process.env.LOADTEST_DURATION_SEC, 20);
   const pipelining = toPositiveInt(argValue("--pipelining") ?? process.env.LOADTEST_PIPELINING, 1);
   const token = argValue("--token") ?? process.env.LOADTEST_BEARER_TOKEN ?? "";
+  const sessionCookie = argValue("--cookie") ?? process.env.LOADTEST_SESSION_COOKIE ?? "";
   const sloLatencyP95Ms = toPositiveNumber(process.env.SLO_LATENCY_P95_MS, 300);
   const sloErrorRatePct = toPositiveNumber(process.env.SLO_ERROR_RATE_PCT, 1);
   const enforceSlo = toBool(argValue("--enforce-slo") ?? process.env.LOADTEST_ENFORCE_SLO, false);
@@ -56,18 +58,20 @@ function parseArgs(): Args {
     durationSec,
     pipelining,
     token,
+    sessionCookie,
     sloLatencyP95Ms,
     sloErrorRatePct,
     enforceSlo,
   };
 }
 
-async function run(): Promise<void> {
-  const args = parseArgs();
+export async function runDashboardLoadTest(args: DashboardLoadTestArgs): Promise<void> {
   const requestUrl = `${args.url.replace(/\/+$/, "")}/${args.endpoint.replace(/^\/+/, "")}`;
   const headers: Record<string, string> = {};
   if (args.token) {
     headers.Authorization = `Bearer ${args.token}`;
+  } else if (args.sessionCookie) {
+    headers.Cookie = args.sessionCookie;
   }
 
   console.log(
@@ -79,6 +83,7 @@ async function run(): Promise<void> {
         durationSec: args.durationSec,
         pipelining: args.pipelining,
         hasToken: Boolean(args.token),
+        hasSessionCookie: Boolean(args.sessionCookie),
       },
       null,
       2,
@@ -148,7 +153,11 @@ async function run(): Promise<void> {
   );
 
   if (!args.token) {
-    console.warn("LOADTEST_BEARER_TOKEN not set. Protected endpoints may return 401/403 and inflate error rate.");
+    if (!args.sessionCookie) {
+      console.warn(
+        "No LOADTEST_BEARER_TOKEN or LOADTEST_SESSION_COOKIE set. Protected endpoints may return 401/403 and inflate error rate.",
+      );
+    }
   }
 
   if (args.enforceSlo && (latencyBreached || errorRateBreached)) {
@@ -156,4 +165,8 @@ async function run(): Promise<void> {
   }
 }
 
-void run();
+async function runFromCli(): Promise<void> {
+  await runDashboardLoadTest(parseDashboardLoadTestArgsFromProcess());
+}
+
+void runFromCli();

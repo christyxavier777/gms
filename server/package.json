@@ -15,6 +15,8 @@
     "seed:admin": "tsx src/scripts/seed-admin.ts",
     "loadtest:dashboard": "tsx src/scripts/load-dashboard.ts",
     "loadtest:dashboard:100": "tsx src/scripts/load-dashboard.ts --connections 100 --duration 20",
+    "loadtest:dashboard:auth": "tsx src/scripts/load-dashboard-auth.ts",
+    "loadtest:dashboard:auth:100": "tsx src/scripts/load-dashboard-auth.ts --connections 100 --duration 20",
     "test": "tsx --test src/tests/*.test.ts",
     "test:unit": "tsx --test src/tests/bmi.unit.test.ts",
     "test:integration": "tsx --test src/tests/progress.integration.test.ts"
