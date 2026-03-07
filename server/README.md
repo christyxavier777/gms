@@ -19,7 +19,7 @@ Academic/demo-grade backend API for a gym management system. Core backend scope 
 - Language: TypeScript
 - Framework: Express
 - ORM: Prisma
-- Database: SQLite (local dev via `DATABASE_URL=file:./dev.db`)
+- Database: PostgreSQL
 - Auth: JWT + bcrypt
 - Validation: Zod
 - Security middleware: helmet, express-rate-limit
@@ -90,11 +90,7 @@ cp .env.example .env
 3. Apply migrations
 
 ```bash
-npm run prisma:migrate
-npm run prisma:migrate:phase2
-npm run prisma:migrate:phase3
-npm run prisma:migrate:phase4
-npm run prisma:migrate:phase5
+npm run prisma:migrate:deploy
 ```
 
 4. Generate Prisma client
@@ -140,3 +136,8 @@ npm run dev
 - Architecture summary: `docs/ARCHITECTURE.md`
 - ERD (Mermaid): `docs/ERD.mmd`
 - Database normalization notes (1NF/2NF/3NF): `docs/ARCHITECTURE.md#normalization-notes-1nf-2nf-3nf`
+
+## Migration Notes
+
+- The active migration history is PostgreSQL baseline in `prisma/migrations/20260307000000_postgres_baseline`.
+- Legacy SQLite migrations are archived in `prisma/migrations_sqlite_legacy` for reference only.
