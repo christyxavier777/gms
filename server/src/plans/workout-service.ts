@@ -141,8 +141,8 @@ export async function assignWorkoutPlan(
   if (!plan) {
     throw new HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
   }
-  if (!canManageWorkoutPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to assign this workout plan");
+  if (requester.role !== Role.ADMIN) {
+    throw new HttpError(403, "FORBIDDEN", "Only admins can assign workout plans");
   }
 
   await assertAssignableMember(memberId);
@@ -153,3 +153,5 @@ export async function assignWorkoutPlan(
   });
   return toSafeWorkoutPlan(updated);
 }
+
+

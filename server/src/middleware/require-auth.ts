@@ -1,13 +1,24 @@
+import { Role } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { verifyAccessToken } from "../auth/jwt";
+import { extractSessionToken, validateSession } from "../auth/session";
 import { HttpError } from "./http-error";
 
-// Ensures a valid Bearer token is present and attaches auth context to request.
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
+// Ensures a valid session cookie or fallback bearer token is present.
+export async function requireAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  const sessionToken = extractSessionToken(req.header("cookie"));
+
+  if (sessionToken) {
+    const auth = await validateSession(sessionToken);
+    req.auth = { userId: auth.userId, role: auth.role as Role };
+    next();
+    return;
+  }
+
   const authorizationHeader = req.header("authorization");
   if (!authorizationHeader) {
-    throw new HttpError(401, "AUTH_REQUIRED", "Authorization header is required");
+    throw new HttpError(401, "AUTH_REQUIRED", "A valid session is required");
   }
 
   const [scheme, token] = authorizationHeader.split(" ");

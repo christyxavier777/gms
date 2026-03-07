@@ -4,6 +4,7 @@ export const createProgressSchema = z
   .object({
     userId: z.string().uuid("userId must be a valid UUID"),
     weight: z.number().positive().nullable().optional(),
+    height: z.number().positive().nullable().optional(),
     bodyFat: z.number().min(0).max(100).nullable().optional(),
     bmi: z.number().positive().nullable().optional(),
     notes: z.string().trim().max(2000).nullable().optional(),
@@ -13,6 +14,7 @@ export const createProgressSchema = z
   .refine(
     (payload) =>
       payload.weight !== undefined ||
+      payload.height !== undefined ||
       payload.bodyFat !== undefined ||
       payload.bmi !== undefined ||
       (payload.notes !== undefined && payload.notes !== null && payload.notes.trim().length > 0),
@@ -23,7 +25,15 @@ export const createProgressSchema = z
   .refine((payload) => payload.recordedAt <= new Date(), {
     message: "recordedAt cannot be in the future",
     path: ["recordedAt"],
-  });
+  })
+  .refine(
+    (payload) =>
+      payload.height === undefined || payload.height === null || payload.height <= 2.6,
+    {
+      message: "height must be in meters (for example: 1.75)",
+      path: ["height"],
+    },
+  );
 
 export const progressIdParamSchema = z.object({
   id: z.string().uuid("Progress id must be a valid UUID"),

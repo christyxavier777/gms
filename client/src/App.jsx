@@ -7,9 +7,10 @@ import TrainerDashboard from './pages/TrainerDashboard'
 import MemberDashboard from './pages/MemberDashboard'
 import Plans from './pages/Plans'
 import Subscriptions from './pages/Subscriptions'
+import Progress from './pages/Progress'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
-import Navbar from "./components/Navbar";
+import Navbar from './components/Navbar'
 
 function App() {
   return (
@@ -30,7 +31,7 @@ function App() {
         <Route
           path="/trainer"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "TRAINER"]}>
+            <ProtectedRoute allowedRoles={["TRAINER"]}>
               <TrainerDashboard />
             </ProtectedRoute>
           }
@@ -38,7 +39,7 @@ function App() {
         <Route
           path="/member"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "TRAINER", "MEMBER"]}>
+            <ProtectedRoute allowedRoles={["MEMBER"]}>
               <MemberDashboard />
             </ProtectedRoute>
           }
@@ -56,6 +57,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "TRAINER", "MEMBER"]}>
               <Subscriptions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/progress"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "TRAINER", "MEMBER"]}>
+              <Progress />
             </ProtectedRoute>
           }
         />

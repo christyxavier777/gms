@@ -1,11 +1,12 @@
-// Safe progress response model for API output.
 export type SafeProgress = {
   id: string;
   userId: string;
   recordedById: string;
   weight: number | null;
+  height: number | null;
   bodyFat: number | null;
   bmi: number | null;
+  dietCategory: "UNDERWEIGHT" | "NORMAL" | "OVERWEIGHT" | "OBESE" | null;
   notes: string | null;
   recordedAt: Date;
   createdAt: Date;

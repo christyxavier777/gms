@@ -5,10 +5,13 @@ import { api } from '../services/api'
 
 export default function Plans() {
   const { token, user } = useAuth()
-  const canManage = user?.role === 'ADMIN' || user?.role === 'TRAINER'
+  const canCreate = user?.role === 'ADMIN' || user?.role === 'TRAINER'
+  const canAssign = user?.role === 'ADMIN'
+  const isAdmin = user?.role === 'ADMIN'
 
   const [workoutPlans, setWorkoutPlans] = useState([])
   const [dietPlans, setDietPlans] = useState([])
+  const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -26,12 +29,20 @@ export default function Plans() {
     try {
       setLoading(true)
       setError('')
-      const [workoutData, dietData] = await Promise.all([
+      const requests = [
         api.listWorkoutPlans(token),
         api.listDietPlans(token),
-      ])
+      ]
+      if (isAdmin) {
+        requests.push(api.listUsers(token))
+      }
+      const [workoutData, dietData, usersData] = await Promise.all(requests)
       setWorkoutPlans(workoutData.plans || [])
       setDietPlans(dietData.plans || [])
+      if (isAdmin) {
+        const memberUsers = (usersData?.users || []).filter((u) => u.role === 'MEMBER')
+        setMembers(memberUsers)
+      }
     } catch (err) {
       setError(err?.message || 'Failed to load plans.')
     } finally {
@@ -41,7 +52,7 @@ export default function Plans() {
 
   useEffect(() => {
     loadPlans()
-  }, [token])
+  }, [token, isAdmin])
 
   const hasLiveData = workoutPlans.length > 0 || dietPlans.length > 0
   const demoWorkoutPlans = [
@@ -149,7 +160,7 @@ export default function Plans() {
         </article>
       </section>
 
-      {canManage && (
+      {canCreate && (
         <section className="grid gap-4 lg:grid-cols-2">
           <form onSubmit={handleCreateWorkout} className="border border-[#2f2f2f] bg-[#111111] p-5">
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Create Workout Plan</h2>
@@ -215,17 +226,34 @@ export default function Plans() {
                 <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
                 <p className="mt-1 text-sm text-gray-300">{plan.description}</p>
                 <p className="mt-1 text-xs text-gray-400">Assigned To: {plan.assignedToId || 'Not assigned'}</p>
-                {canManage && (
+                {canAssign && (
                   <div className="mt-3 flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Member UUID"
-                      value={workoutAssign[plan.id] || ''}
-                      onChange={(e) =>
-                        setWorkoutAssign((prev) => ({ ...prev, [plan.id]: e.target.value }))
-                      }
-                      className="flex-1 border border-[#333333] bg-[#111111] px-2 py-1 text-sm text-white outline-none focus:border-[#E21A2C]"
-                    />
+                    {isAdmin ? (
+                      <select
+                        value={workoutAssign[plan.id] || ''}
+                        onChange={(e) =>
+                          setWorkoutAssign((prev) => ({ ...prev, [plan.id]: e.target.value }))
+                        }
+                        className="flex-1 border border-[#333333] bg-[#111111] px-2 py-1 text-sm text-white outline-none focus:border-[#E21A2C]"
+                      >
+                        <option value="">Select member</option>
+                        {members.map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {member.name} ({member.email})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Member UUID"
+                        value={workoutAssign[plan.id] || ''}
+                        onChange={(e) =>
+                          setWorkoutAssign((prev) => ({ ...prev, [plan.id]: e.target.value }))
+                        }
+                        className="flex-1 border border-[#333333] bg-[#111111] px-2 py-1 text-sm text-white outline-none focus:border-[#E21A2C]"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => handleAssignWorkout(plan.id)}
@@ -249,15 +277,30 @@ export default function Plans() {
                 <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
                 <p className="mt-1 text-sm text-gray-300">{plan.description}</p>
                 <p className="mt-1 text-xs text-gray-400">Assigned To: {plan.assignedToId || 'Not assigned'}</p>
-                {canManage && (
+                {canAssign && (
                   <div className="mt-3 flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Member UUID"
-                      value={dietAssign[plan.id] || ''}
-                      onChange={(e) => setDietAssign((prev) => ({ ...prev, [plan.id]: e.target.value }))}
-                      className="flex-1 border border-[#333333] bg-[#111111] px-2 py-1 text-sm text-white outline-none focus:border-[#E21A2C]"
-                    />
+                    {isAdmin ? (
+                      <select
+                        value={dietAssign[plan.id] || ''}
+                        onChange={(e) => setDietAssign((prev) => ({ ...prev, [plan.id]: e.target.value }))}
+                        className="flex-1 border border-[#333333] bg-[#111111] px-2 py-1 text-sm text-white outline-none focus:border-[#E21A2C]"
+                      >
+                        <option value="">Select member</option>
+                        {members.map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {member.name} ({member.email})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Member UUID"
+                        value={dietAssign[plan.id] || ''}
+                        onChange={(e) => setDietAssign((prev) => ({ ...prev, [plan.id]: e.target.value }))}
+                        className="flex-1 border border-[#333333] bg-[#111111] px-2 py-1 text-sm text-white outline-none focus:border-[#E21A2C]"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => handleAssignDiet(plan.id)}
@@ -275,3 +318,7 @@ export default function Plans() {
     </DashboardLayout>
   )
 }
+
+
+
+

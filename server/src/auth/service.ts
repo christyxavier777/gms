@@ -2,10 +2,10 @@ import { Role, User } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { hashPassword, verifyPassword } from "./password";
-import { issueAccessToken } from "./jwt";
 import { LoginInput, RegisterInput } from "./schemas";
 import { SafeUser } from "./types";
 import { env } from "../config/env";
+import { createSession } from "./session";
 
 const prisma = createPrismaClient();
 
@@ -14,6 +14,7 @@ function toSafeUser(user: User): SafeUser {
     id: user.id,
     name: user.name,
     email: user.email,
+    phone: user.phone,
     role: user.role,
     status: user.status,
     createdAt: user.createdAt,
@@ -21,12 +22,20 @@ function toSafeUser(user: User): SafeUser {
   };
 }
 
-// Registers a new member account.
 export async function registerUser(input: RegisterInput): Promise<SafeUser> {
   const email = input.email.toLowerCase();
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
+  const phone = input.phone.trim();
+
+  const [existingByEmail, existingByPhone] = await prisma.$transaction([
+    prisma.user.findUnique({ where: { email } }),
+    prisma.user.findUnique({ where: { phone } }),
+  ]);
+
+  if (existingByEmail) {
     throw new HttpError(409, "EMAIL_ALREADY_EXISTS", "Email is already registered");
+  }
+  if (existingByPhone) {
+    throw new HttpError(409, "PHONE_ALREADY_EXISTS", "Phone is already registered");
   }
 
   const requestedRole = input.role ?? Role.MEMBER;
@@ -53,6 +62,7 @@ export async function registerUser(input: RegisterInput): Promise<SafeUser> {
     data: {
       name: input.name,
       email,
+      phone,
       passwordHash,
       role: requestedRole,
     },
@@ -61,8 +71,10 @@ export async function registerUser(input: RegisterInput): Promise<SafeUser> {
   return toSafeUser(user);
 }
 
-// Authenticates user credentials and returns a signed JWT.
-export async function loginUser(input: LoginInput): Promise<string> {
+export async function loginUser(
+  input: LoginInput,
+  meta: { userAgent?: string | undefined; ipAddress?: string | undefined },
+): Promise<{ user: SafeUser; sessionToken: string; expiresAt: Date }> {
   const email = input.email.toLowerCase();
   const user = await prisma.user.findUnique({ where: { email } });
 
@@ -70,19 +82,35 @@ export async function loginUser(input: LoginInput): Promise<string> {
     throw new HttpError(401, "INVALID_CREDENTIALS", "Invalid email or password");
   }
 
+  if (user.status !== "ACTIVE") {
+    throw new HttpError(403, "ACCOUNT_INACTIVE", "Your account is inactive");
+  }
+
   const passwordValid = await verifyPassword(input.password, user.passwordHash);
   if (!passwordValid) {
     throw new HttpError(401, "INVALID_CREDENTIALS", "Invalid email or password");
   }
 
-  return issueAccessToken({ userId: user.id, role: user.role });
+  const { token, expiresAt } = await createSession({
+    userId: user.id,
+    ...(meta.userAgent ? { userAgent: meta.userAgent } : {}),
+    ...(meta.ipAddress ? { ipAddress: meta.ipAddress } : {}),
+  });
+
+  return {
+    user: toSafeUser(user),
+    sessionToken: token,
+    expiresAt,
+  };
 }
 
-// Returns the safe profile for an authenticated user.
 export async function getSafeUserById(userId: string): Promise<SafeUser> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     throw new HttpError(404, "USER_NOT_FOUND", "Authenticated user not found");
+  }
+  if (user.status !== "ACTIVE") {
+    throw new HttpError(403, "ACCOUNT_INACTIVE", "Your account is inactive");
   }
   return toSafeUser(user);
 }

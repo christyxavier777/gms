@@ -2,7 +2,6 @@ import { createContext, useState, useContext, useEffect } from 'react'
 import { api } from '../services/api'
 
 const AuthContext = createContext()
-const AUTH_TOKEN_KEY = 'authToken'
 
 function normalizeRole(role) {
   return String(role || '').toUpperCase()
@@ -22,18 +21,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedToken = localStorage.getItem(AUTH_TOKEN_KEY)
-      if (!storedToken) {
-        setLoading(false)
-        return
-      }
-
       try {
-        setToken(storedToken)
-        const data = await api.me(storedToken)
+        const data = await api.me()
         setUser({ ...data.user, role: normalizeRole(data.user?.role) })
+        setToken('cookie-session')
       } catch (_error) {
-        localStorage.removeItem(AUTH_TOKEN_KEY)
         setUser(null)
         setToken(null)
       } finally {
@@ -45,24 +37,26 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = async ({ email, password }) => {
-    const { token: nextToken } = await api.login({ email, password })
-    const data = await api.me(nextToken)
-    const nextUser = { ...data.user, role: normalizeRole(data.user?.role) }
+    const { user: nextUserRaw } = await api.login({ email, password })
+    const nextUser = { ...nextUserRaw, role: normalizeRole(nextUserRaw?.role) }
     setUser(nextUser)
-    setToken(nextToken)
-    localStorage.setItem(AUTH_TOKEN_KEY, nextToken)
+    setToken('cookie-session')
     return getDashboardPath(nextUser.role)
   }
 
-  const register = async ({ name, email, password, role, inviteCode }) => {
-    await api.register({ name, email, password, role, inviteCode })
+  const register = async ({ name, email, phone, password, role, inviteCode }) => {
+    await api.register({ name, email, phone, password, role, inviteCode })
     return login({ email, password })
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.logout()
+    } catch (_error) {
+      // noop
+    }
     setUser(null)
     setToken(null)
-    localStorage.removeItem(AUTH_TOKEN_KEY)
   }
 
   return (
@@ -71,7 +65,7 @@ export function AuthProvider({ children }) {
         user,
         token,
         loading,
-        isAuthenticated: Boolean(user && token),
+        isAuthenticated: Boolean(user),
         login,
         register,
         logout,

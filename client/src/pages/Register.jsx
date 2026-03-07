@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 export default function Register() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('MEMBER')
   const [inviteCode, setInviteCode] = useState('')
@@ -16,8 +17,9 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const errors = {}
-    if (!name) errors.name = 'Name is required'
-    if (!email) errors.email = 'Email is required'
+    if (!name.trim()) errors.name = 'Name is required'
+    if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email.trim())) errors.email = 'Use a valid @gmail.com email'
+    if (!/^\d{10}$/.test(phone.trim())) errors.phone = 'Phone must be exactly 10 digits'
     if (!password) errors.password = 'Password is required'
     if (!role) errors.role = 'Role is required'
     if (role !== 'MEMBER' && !inviteCode) errors.inviteCode = 'Invite code is required'
@@ -25,12 +27,14 @@ export default function Register() {
       setError(errors)
       return
     }
+
     setError({})
     setIsSubmitting(true)
     try {
       const dashboardPath = await register({
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
         password,
         role,
         inviteCode: inviteCode || undefined,
@@ -56,10 +60,7 @@ export default function Register() {
           <input
             type="text"
             value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-              if (error.name) setError((prev) => { const next = { ...prev }; delete next.name; return next })
-            }}
+            onChange={(e) => setName(e.target.value)}
             className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           />
           {error.name && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.name}</p>}
@@ -70,13 +71,21 @@ export default function Register() {
           <input
             type="email"
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              if (error.email) setError((prev) => { const next = { ...prev }; delete next.email; return next })
-            }}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           />
           {error.email && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.email}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <label className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Phone (10 digits)</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+            className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
+          />
+          {error.phone && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.phone}</p>}
         </div>
 
         <div className="space-y-1">
@@ -84,10 +93,7 @@ export default function Register() {
           <input
             type="password"
             value={password}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              if (error.password) setError((prev) => { const next = { ...prev }; delete next.password; return next })
-            }}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           />
           {error.password && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.password}</p>}
@@ -97,10 +103,7 @@ export default function Register() {
           <label className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Role</label>
           <select
             value={role}
-            onChange={(e) => {
-              setRole(e.target.value)
-              if (error.role) setError((prev) => { const next = { ...prev }; delete next.role; return next })
-            }}
+            onChange={(e) => setRole(e.target.value)}
             className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
           >
             <option value="MEMBER">Member</option>
@@ -118,10 +121,7 @@ export default function Register() {
             <input
               type="password"
               value={inviteCode}
-              onChange={(e) => {
-                setInviteCode(e.target.value)
-                if (error.inviteCode) setError((prev) => { const next = { ...prev }; delete next.inviteCode; return next })
-              }}
+              onChange={(e) => setInviteCode(e.target.value)}
               className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-base text-white outline-none transition-colors focus:border-[#E21A2C]"
             />
             {error.inviteCode && <p className="mt-2 text-sm font-semibold text-[#E21A2C]">{error.inviteCode}</p>}
@@ -130,7 +130,7 @@ export default function Register() {
 
         <button
           type="submit"
-          disabled={!name || !email || !password || !role || (role !== 'MEMBER' && !inviteCode) || isSubmitting}
+          disabled={!name || !email || !phone || !password || !role || (role !== 'MEMBER' && !inviteCode) || isSubmitting}
           className="w-full border border-[#E21A2C] bg-[#E21A2C] py-2 text-base font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#b91524] disabled:cursor-not-allowed disabled:border-[#4d4d4d] disabled:bg-[#2a2a2a] disabled:text-gray-500"
         >
           {isSubmitting ? 'Creating account...' : 'Register'}

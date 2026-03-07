@@ -31,7 +31,7 @@ usersRouter.get("/users/:id", requireAuth, async (req, res) => {
       throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
     }
 
-    const allowed = canReadUser(req.auth, params.id);
+    const allowed = await canReadUser(req.auth, params.id);
     if (!allowed) {
       throw new HttpError(403, "FORBIDDEN", "You are not allowed to access this resource");
     }
@@ -79,3 +79,4 @@ usersRouter.delete("/users/:id", requireAuth, requireRole(Role.ADMIN), async (re
     throw error;
   }
 });
+

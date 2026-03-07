@@ -10,6 +10,7 @@ function toSafeUser(user: User): SafeUser {
     id: user.id,
     name: user.name,
     email: user.email,
+    phone: user.phone,
     role: user.role,
     status: user.status,
     createdAt: user.createdAt,
@@ -17,7 +18,6 @@ function toSafeUser(user: User): SafeUser {
   };
 }
 
-// Returns a paginated list of users for ADMIN-only management views.
 export async function listUsers(page: number, pageSize: number): Promise<{
   users: SafeUser[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
@@ -43,7 +43,6 @@ export async function listUsers(page: number, pageSize: number): Promise<{
   };
 }
 
-// Reads a single user profile in safe response form.
 export async function getUserById(id: string): Promise<SafeUser> {
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
@@ -52,7 +51,6 @@ export async function getUserById(id: string): Promise<SafeUser> {
   return toSafeUser(user);
 }
 
-// Updates only lifecycle status for a user.
 export async function updateUserStatus(id: string, status: UserStatus): Promise<SafeUser> {
   try {
     const user = await prisma.user.update({
@@ -68,7 +66,6 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
   }
 }
 
-// Hard-deletes a user account by identifier.
 export async function deleteUser(id: string): Promise<void> {
   try {
     await prisma.user.delete({ where: { id } });
@@ -80,13 +77,18 @@ export async function deleteUser(id: string): Promise<void> {
   }
 }
 
-// Phase 2 stub: trainer-to-member assignment check intentionally unimplemented.
-export function trainerCanReadMember(_trainerId: string, _memberId: string): boolean {
-  return false;
+export async function trainerCanReadMember(trainerId: string, memberId: string): Promise<boolean> {
+  const assignment = await prisma.trainerMemberAssignment.findFirst({
+    where: { trainerId, memberId, active: true },
+    select: { id: true },
+  });
+  return Boolean(assignment);
 }
 
-// Enforces view access for /users/:id according to Phase 2 constraints.
-export function canReadUser(requester: { userId: string; role: Role }, targetUserId: string): boolean {
+export async function canReadUser(
+  requester: { userId: string; role: Role },
+  targetUserId: string,
+): Promise<boolean> {
   if (requester.role === Role.ADMIN) return true;
   if (requester.userId === targetUserId) return true;
   if (requester.role === Role.TRAINER) return trainerCanReadMember(requester.userId, targetUserId);

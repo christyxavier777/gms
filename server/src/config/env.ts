@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 
-// Loads environment variables from .env as early as possible.
 dotenv.config({ quiet: true });
 
 function readRequiredEnv(
@@ -20,7 +19,6 @@ function readRequiredEnv(
   return value.trim();
 }
 
-// Centralized, validated runtime configuration for the server process.
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(readRequiredEnv("PORT")),
@@ -36,6 +34,7 @@ export const env = {
     name: readRequiredEnv("ADMIN_NAME"),
     email: readRequiredEnv("ADMIN_EMAIL").toLowerCase(),
     password: readRequiredEnv("ADMIN_PASSWORD"),
+    phone: process.env.ADMIN_PHONE?.trim() || "9999999999",
   },
   roleInviteCodes: {
     trainer: process.env.TRAINER_INVITE_CODE?.trim() ?? "",

@@ -124,7 +124,7 @@ export async function getSubscriptionById(
 
   const isOwner = subscription.userId === requester.userId;
   const trainerAllowed =
-    requester.role === Role.TRAINER && trainerCanReadMember(requester.userId, subscription.userId);
+    requester.role === Role.TRAINER && (await trainerCanReadMember(requester.userId, subscription.userId));
   if (requester.role !== Role.ADMIN && !isOwner && !trainerAllowed) {
     throw new HttpError(403, "FORBIDDEN", "You are not allowed to access this subscription");
   }
@@ -157,3 +157,5 @@ export async function cancelSubscription(id: string): Promise<SafeSubscription> 
     throw error;
   }
 }
+
+

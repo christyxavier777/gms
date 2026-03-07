@@ -18,6 +18,7 @@ async function seedAdmin(): Promise<void> {
       data: {
         name: env.adminSeed.name,
         role: Role.ADMIN,
+        phone: env.adminSeed.phone,
         passwordHash,
       },
     });
@@ -28,6 +29,7 @@ async function seedAdmin(): Promise<void> {
       data: {
         name: env.adminSeed.name,
         email,
+        phone: env.adminSeed.phone,
         passwordHash,
         role: Role.ADMIN,
       },

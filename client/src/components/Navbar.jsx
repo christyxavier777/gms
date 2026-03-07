@@ -35,6 +35,9 @@ export default function Navbar() {
                 <Link to="/subscriptions" className="text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:text-[#E21A2C]">Subscriptions</Link>
               </li>
               <li>
+                <Link to="/progress" className="text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:text-[#E21A2C]">Progress</Link>
+              </li>
+              <li>
                 <button
                   onClick={() => { logout(); navigate('/login'); }}
                   className="border border-[#E21A2C] bg-[#1A1A1A] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#E21A2C]"

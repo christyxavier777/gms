@@ -24,22 +24,40 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum DietCategory {
+  UNDERWEIGHT
+  NORMAL
+  OVERWEIGHT
+  OBESE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 model User {
-  id                    String        @id @default(uuid())
+  id                    String                    @id @default(uuid())
   name                  String
-  email                 String        @unique
+  email                 String                    @unique
+  phone                 String                    @unique
   passwordHash          String
-  role                  Role          @default(MEMBER)
-  status                UserStatus    @default(ACTIVE)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  workoutPlansCreated   WorkoutPlan[] @relation("WorkoutPlansCreated")
-  workoutPlansAssigned  WorkoutPlan[] @relation("WorkoutPlansAssigned")
-  dietPlansCreated      DietPlan[]    @relation("DietPlansCreated")
-  dietPlansAssigned     DietPlan[]    @relation("DietPlansAssigned")
+  role                  Role                      @default(MEMBER)
+  status                UserStatus                @default(ACTIVE)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  workoutPlansCreated   WorkoutPlan[]             @relation("WorkoutPlansCreated")
+  workoutPlansAssigned  WorkoutPlan[]             @relation("WorkoutPlansAssigned")
+  dietPlansCreated      DietPlan[]                @relation("DietPlansCreated")
+  dietPlansAssigned     DietPlan[]                @relation("DietPlansAssigned")
   subscriptions         Subscription[]
-  progressEntries       Progress[]    @relation("ProgressForMember")
-  progressRecorded      Progress[]    @relation("ProgressRecordedBy")
+  progressEntries       Progress[]                @relation("ProgressForMember")
+  progressRecorded      Progress[]                @relation("ProgressRecordedBy")
+  sessions              Session[]
+  payments              Payment[]
+  trainerAssignments    TrainerMemberAssignment[] @relation("TrainerAssignments")
+  memberAssignments     TrainerMemberAssignment[] @relation("MemberAssignments")
 }
 
 model WorkoutPlan {
@@ -78,21 +96,74 @@ model Subscription {
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  @@index([userId, status])
 }
 
 model Progress {
-  id           String   @id @default(uuid())
+  id           String       @id @default(uuid())
   userId       String
   recordedById String
   weight       Float?
+  height       Float?
   bodyFat      Float?
   bmi          Float?
+  dietCategory DietCategory?
   notes        String?
   recordedAt   DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   user       User @relation("ProgressForMember", fields: [userId], references: [id], onDelete: Restrict)
   recordedBy User @relation("ProgressRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([userId, recordedAt])
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String
+  tokenHash        String   @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model TrainerMemberAssignment {
+  id        String   @id @default(uuid())
+  trainerId String
+  memberId  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  trainer User @relation("TrainerAssignments", fields: [trainerId], references: [id], onDelete: Restrict)
+  member  User @relation("MemberAssignments", fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@unique([trainerId, memberId])
+  @@index([memberId, active])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  transactionId  String        @unique
+  userId         String
+  subscriptionId String?
+  amount         Float
+  upiId          String
+  status         PaymentStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
 }

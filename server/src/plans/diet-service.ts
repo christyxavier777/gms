@@ -141,8 +141,8 @@ export async function assignDietPlan(
   if (!plan) {
     throw new HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
   }
-  if (!canManageDietPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to assign this diet plan");
+  if (requester.role !== Role.ADMIN) {
+    throw new HttpError(403, "FORBIDDEN", "Only admins can assign diet plans");
   }
 
   await assertAssignableMember(memberId);
@@ -153,3 +153,5 @@ export async function assignDietPlan(
   });
   return toSafeDietPlan(updated);
 }
+
+
