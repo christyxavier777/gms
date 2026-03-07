@@ -70,7 +70,7 @@ server/
 | `JWT_SECRET` | Yes | - | JWT signing secret |
 | `JWT_EXPIRES_IN` | Yes | - | JWT TTL (example: `1d`) |
 | `ADMIN_NAME` | Yes | - | Seed admin display name |
-| `ADMIN_EMAIL` | Yes | - | Seed admin email |
+| `ADMIN_EMAIL` | Yes | - | Seed admin email (must be valid `@gmail.com`) |
 | `ADMIN_PASSWORD` | Yes | - | Seed admin password |
 | `JSON_BODY_LIMIT` | No | `100kb` | Global JSON/urlencoded request size cap |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | No | `900000` | Auth limiter window |
