@@ -7,7 +7,8 @@ import { requireRole } from "../middleware/require-role";
 import { recentLimitQuerySchema } from "../dashboard/schemas";
 import { getAdminDashboard, getMemberDashboard, getTrainerDashboard } from "../dashboard/service";
 import { buildDashboardCacheKey, getDashboardCache, setDashboardCache } from "../dashboard/cache";
-import { getPerformanceSnapshot } from "../observability/perf-metrics";
+import { getPerformanceSnapshot, getSloSnapshot } from "../observability/perf-metrics";
+import { getCacheSnapshot } from "../observability/cache-metrics";
 
 // Read-only role-specific dashboard endpoints.
 export const dashboardRouter = Router();
@@ -26,7 +27,9 @@ dashboardRouter.get("/dashboard/admin/performance", requireAuth, requireRole(Rol
   const requestedLimit = Number(req.query.limit ?? 30);
   const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 30;
   const metrics = getPerformanceSnapshot(limit);
-  res.status(200).json({ metrics });
+  const slo = getSloSnapshot();
+  const cache = getCacheSnapshot();
+  res.status(200).json({ metrics, slo, cache });
 });
 
 dashboardRouter.get("/dashboard/trainer", requireAuth, requireRole(Role.TRAINER), async (req, res) => {

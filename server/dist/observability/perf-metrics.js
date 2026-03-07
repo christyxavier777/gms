@@ -3,8 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildEndpointKey = buildEndpointKey;
 exports.recordRequestMetric = recordRequestMetric;
 exports.getPerformanceSnapshot = getPerformanceSnapshot;
+exports.getSloSnapshot = getSloSnapshot;
 exports.logPerformanceSummaryAndReset = logPerformanceSummaryAndReset;
 const logger_1 = require("../utils/logger");
+const env_1 = require("../config/env");
 const SAMPLE_CAP = 512;
 const endpointMetrics = new Map();
 function percentile(values, p) {
@@ -62,6 +64,35 @@ function buildSnapshotFromCurrent() {
 }
 function getPerformanceSnapshot(limit = 30) {
     return buildSnapshotFromCurrent().slice(0, Math.max(1, limit));
+}
+function getSloSnapshot() {
+    let totalRequests = 0;
+    let total4xx = 0;
+    let total5xx = 0;
+    const mergedSamples = [];
+    for (const metric of endpointMetrics.values()) {
+        totalRequests += metric.count;
+        total4xx += metric.status4xx;
+        total5xx += metric.status5xx;
+        mergedSamples.push(...metric.samplesMs);
+    }
+    const errorRatePct = totalRequests === 0 ? 0 : (total5xx / totalRequests) * 100;
+    const p95Ms = percentile(mergedSamples, 95);
+    const latencyBreached = p95Ms > env_1.env.sloLatencyP95Ms;
+    const errorRateBreached = errorRatePct > env_1.env.sloErrorRatePct;
+    return {
+        totalRequests,
+        total4xx,
+        total5xx,
+        errorRatePct: Number(errorRatePct.toFixed(2)),
+        p95Ms,
+        p95ThresholdMs: env_1.env.sloLatencyP95Ms,
+        errorRateThresholdPct: env_1.env.sloErrorRatePct,
+        breached: {
+            latencyP95: latencyBreached,
+            errorRate: errorRateBreached,
+        },
+    };
 }
 function logPerformanceSummaryAndReset() {
     if (endpointMetrics.size === 0)

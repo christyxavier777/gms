@@ -38,6 +38,8 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gms_ci?schema=public
       REDIS_URL: redis://localhost:6379
       DASHBOARD_CACHE_TTL_SEC: "45"
+      SLO_LATENCY_P95_MS: "300"
+      SLO_ERROR_RATE_PCT: "1"
       JWT_SECRET: ci-jwt-secret
       JWT_EXPIRES_IN: 1d
       ADMIN_NAME: CI Admin

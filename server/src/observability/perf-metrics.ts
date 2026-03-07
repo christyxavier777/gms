@@ -1,4 +1,5 @@
 import { logInfo } from "../utils/logger";
+import { env } from "../config/env";
 
 type EndpointAggregate = {
   count: number;
@@ -17,6 +18,20 @@ type EndpointSnapshot = {
   maxMs: number;
   status4xx: number;
   status5xx: number;
+};
+
+type SloSnapshot = {
+  totalRequests: number;
+  total4xx: number;
+  total5xx: number;
+  errorRatePct: number;
+  p95Ms: number;
+  p95ThresholdMs: number;
+  errorRateThresholdPct: number;
+  breached: {
+    latencyP95: boolean;
+    errorRate: boolean;
+  };
 };
 
 const SAMPLE_CAP = 512;
@@ -81,6 +96,39 @@ function buildSnapshotFromCurrent(): EndpointSnapshot[] {
 
 export function getPerformanceSnapshot(limit = 30): EndpointSnapshot[] {
   return buildSnapshotFromCurrent().slice(0, Math.max(1, limit));
+}
+
+export function getSloSnapshot(): SloSnapshot {
+  let totalRequests = 0;
+  let total4xx = 0;
+  let total5xx = 0;
+  const mergedSamples: number[] = [];
+
+  for (const metric of endpointMetrics.values()) {
+    totalRequests += metric.count;
+    total4xx += metric.status4xx;
+    total5xx += metric.status5xx;
+    mergedSamples.push(...metric.samplesMs);
+  }
+
+  const errorRatePct = totalRequests === 0 ? 0 : (total5xx / totalRequests) * 100;
+  const p95Ms = percentile(mergedSamples, 95);
+  const latencyBreached = p95Ms > env.sloLatencyP95Ms;
+  const errorRateBreached = errorRatePct > env.sloErrorRatePct;
+
+  return {
+    totalRequests,
+    total4xx,
+    total5xx,
+    errorRatePct: Number(errorRatePct.toFixed(2)),
+    p95Ms,
+    p95ThresholdMs: env.sloLatencyP95Ms,
+    errorRateThresholdPct: env.sloErrorRatePct,
+    breached: {
+      latencyP95: latencyBreached,
+      errorRate: errorRateBreached,
+    },
+  };
 }
 
 export function logPerformanceSummaryAndReset(): void {

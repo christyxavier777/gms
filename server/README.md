@@ -65,6 +65,8 @@ server/
 | `DATABASE_URL` | Yes | - | Prisma datasource URL |
 | `REDIS_URL` | No | - | Redis connection URL for distributed cache/rate-limit state |
 | `DASHBOARD_CACHE_TTL_SEC` | No | `45` | Dashboard cache TTL in seconds |
+| `SLO_LATENCY_P95_MS` | No | `300` | p95 latency SLO threshold (milliseconds) |
+| `SLO_ERROR_RATE_PCT` | No | `1` | 5xx error-rate SLO threshold (percent) |
 | `JWT_SECRET` | Yes | - | JWT signing secret |
 | `JWT_EXPIRES_IN` | Yes | - | JWT TTL (example: `1d`) |
 | `ADMIN_NAME` | Yes | - | Seed admin display name |

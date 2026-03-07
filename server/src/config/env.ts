@@ -32,6 +32,8 @@ export const env = {
   mutationRateLimitMax: Number(process.env.MUTATION_RATE_LIMIT_MAX ?? "120"),
   redisUrl: process.env.REDIS_URL?.trim() ?? "",
   dashboardCacheTtlSec: Number(process.env.DASHBOARD_CACHE_TTL_SEC ?? "45"),
+  sloLatencyP95Ms: Number(process.env.SLO_LATENCY_P95_MS ?? "300"),
+  sloErrorRatePct: Number(process.env.SLO_ERROR_RATE_PCT ?? "1"),
   adminSeed: {
     name: readRequiredEnv("ADMIN_NAME"),
     email: readRequiredEnv("ADMIN_EMAIL").toLowerCase(),
@@ -53,7 +55,9 @@ if (
   Number.isNaN(env.authRateLimitMax) ||
   Number.isNaN(env.mutationRateLimitWindowMs) ||
   Number.isNaN(env.mutationRateLimitMax) ||
-  Number.isNaN(env.dashboardCacheTtlSec)
+  Number.isNaN(env.dashboardCacheTtlSec) ||
+  Number.isNaN(env.sloLatencyP95Ms) ||
+  Number.isNaN(env.sloErrorRatePct)
 ) {
   throw new Error("Rate limit environment variables must be valid numbers.");
 }

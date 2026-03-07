@@ -9,6 +9,7 @@ const http_error_1 = require("../middleware/http-error");
 const password_1 = require("./password");
 const env_1 = require("../config/env");
 const session_1 = require("./session");
+const cache_1 = require("../dashboard/cache");
 const prisma = (0, client_2.createPrismaClient)();
 function toSafeUser(user) {
     return {
@@ -56,6 +57,7 @@ async function registerUser(input) {
             role: requestedRole,
         },
     });
+    await (0, cache_1.invalidateDashboardCache)("user_registered");
     return toSafeUser(user);
 }
 async function loginUser(input, meta) {
