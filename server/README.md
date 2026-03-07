@@ -116,6 +116,21 @@ npm run seed:admin
 npm run dev
 ```
 
+## Dashboard Load Test
+
+Baseline dashboard concurrency and compare against SLO thresholds:
+
+```bash
+npm run loadtest:dashboard:100
+```
+
+Recommended environment variables before running:
+
+- `LOADTEST_BEARER_TOKEN`: Admin JWT token for `/dashboard/admin/performance`
+- `LOADTEST_BASE_URL`: Target base URL (default `http://127.0.0.1:4000`)
+- `LOADTEST_ENDPOINT`: Endpoint path (default `/dashboard/admin/performance`)
+- `LOADTEST_ENFORCE_SLO`: Set `true` to exit non-zero when SLO is breached
+
 ## Security Notes
 
 - `helmet` enabled and `x-powered-by` disabled.
