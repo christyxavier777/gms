@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cacheGet = cacheGet;
 exports.cacheSet = cacheSet;
+exports.cacheSetIfAbsent = cacheSetIfAbsent;
+exports.cacheDel = cacheDel;
 exports.cacheDelByPrefix = cacheDelByPrefix;
 exports.cacheIncrWindow = cacheIncrWindow;
 exports.logCacheUnavailableIfNeeded = logCacheUnavailableIfNeeded;
@@ -81,6 +83,44 @@ async function cacheSet(key, value, ttlSec) {
         }
     }
     setMemory(key, value, ttlSec);
+}
+async function cacheSetIfAbsent(key, value, ttlSec) {
+    const redis = getRedisClient();
+    if (redis) {
+        try {
+            if (redis.status === "wait")
+                await redis.connect();
+            const result = await redis.set(key, value, "EX", ttlSec, "NX");
+            return result === "OK";
+        }
+        catch {
+            // Continue with memory fallback.
+        }
+    }
+    const existing = getMemory(key);
+    if (existing !== null) {
+        return false;
+    }
+    setMemory(key, value, ttlSec);
+    return true;
+}
+async function cacheDel(key) {
+    const redis = getRedisClient();
+    if (redis) {
+        try {
+            if (redis.status === "wait")
+                await redis.connect();
+            return await redis.del(key);
+        }
+        catch {
+            // Continue with memory fallback.
+        }
+    }
+    if (memoryStore.has(key)) {
+        memoryStore.delete(key);
+        return 1;
+    }
+    return 0;
 }
 async function cacheDelByPrefix(prefix) {
     const redis = getRedisClient();

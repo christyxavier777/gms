@@ -8,6 +8,10 @@ import { wearableSyncRateLimiter } from "../middleware/rate-limit";
 import { requireAuth } from "../middleware/require-auth";
 import { requireRole } from "../middleware/require-role";
 import { requireWearableWebhookSignature } from "../middleware/require-wearable-webhook-signature";
+import {
+  finalizeWearableWebhookEvent,
+  requireWearableWebhookIdempotency,
+} from "../middleware/wearable-webhook-idempotency";
 
 export const integrationsRouter = Router();
 
@@ -35,12 +39,20 @@ integrationsRouter.post(
   "/integrations/wearables/webhook",
   wearableSyncRateLimiter,
   requireWearableWebhookSignature,
+  requireWearableWebhookIdempotency,
   async (req, res) => {
+    let dedupeKey: string | undefined = req.wearableWebhook?.dedupeKey;
     try {
       const payload = wearableWebhookSyncSchema.parse(req.body);
       const synced = await syncWearableProgressForMember(payload.memberUserId, payload);
+      if (dedupeKey) {
+        await finalizeWearableWebhookEvent(dedupeKey, true);
+      }
       res.status(201).json({ synced });
     } catch (error) {
+      if (dedupeKey) {
+        await finalizeWearableWebhookEvent(dedupeKey, false);
+      }
       if (error instanceof ZodError) {
         throw new HttpError(400, "VALIDATION_ERROR", "Wearable webhook payload is invalid", error.flatten());
       }

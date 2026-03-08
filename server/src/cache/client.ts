@@ -83,6 +83,44 @@ export async function cacheSet(key: string, value: string, ttlSec: number): Prom
   setMemory(key, value, ttlSec);
 }
 
+export async function cacheSetIfAbsent(key: string, value: string, ttlSec: number): Promise<boolean> {
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      if (redis.status === "wait") await redis.connect();
+      const result = await redis.set(key, value, "EX", ttlSec, "NX");
+      return result === "OK";
+    } catch {
+      // Continue with memory fallback.
+    }
+  }
+
+  const existing = getMemory(key);
+  if (existing !== null) {
+    return false;
+  }
+  setMemory(key, value, ttlSec);
+  return true;
+}
+
+export async function cacheDel(key: string): Promise<number> {
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      if (redis.status === "wait") await redis.connect();
+      return await redis.del(key);
+    } catch {
+      // Continue with memory fallback.
+    }
+  }
+
+  if (memoryStore.has(key)) {
+    memoryStore.delete(key);
+    return 1;
+  }
+  return 0;
+}
+
 export async function cacheDelByPrefix(prefix: string): Promise<number> {
   const redis = getRedisClient();
   let deleted = 0;
