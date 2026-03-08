@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { env } from "../config/env";
 import { cacheDel, cacheSet, cacheSetIfAbsent } from "../cache/client";
 import { HttpError } from "./http-error";
+import { logInfo } from "../utils/logger";
 
 const WEBHOOK_DEDUPE_PREFIX = "wearable:webhook:event:";
 const IN_FLIGHT_TTL_SEC = 120;
@@ -37,17 +38,50 @@ export async function requireWearableWebhookIdempotency(
 
   const reserved = await cacheSetIfAbsent(dedupeKey, "in_flight", IN_FLIGHT_TTL_SEC);
   if (!reserved) {
+    logInfo("wearable_webhook_duplicate", {
+      requestId: req.requestId,
+      provider,
+      eventId,
+    });
     throw new HttpError(409, "DUPLICATE_WEBHOOK_EVENT", "Webhook event already processed or in progress");
   }
 
+  logInfo("wearable_webhook_reserved", {
+    requestId: req.requestId,
+    provider,
+    eventId,
+  });
   req.wearableWebhook = { provider, eventId, dedupeKey };
   next();
 }
 
-export async function finalizeWearableWebhookEvent(dedupeKey: string, success: boolean): Promise<void> {
+export async function finalizeWearableWebhookEvent(
+  dedupeKey: string,
+  success: boolean,
+  context?: {
+    requestId?: string | undefined;
+    provider?: string | undefined;
+    eventId?: string | undefined;
+    memberUserId?: string | undefined;
+  },
+): Promise<void> {
   if (success) {
     await cacheSet(dedupeKey, "processed", env.wearableWebhookDedupeTtlSec);
+    logInfo("wearable_webhook_finalized", {
+      requestId: context?.requestId,
+      provider: context?.provider,
+      eventId: context?.eventId,
+      memberUserId: context?.memberUserId,
+      status: "processed",
+    });
     return;
   }
   await cacheDel(dedupeKey);
+  logInfo("wearable_webhook_finalized", {
+    requestId: context?.requestId,
+    provider: context?.provider,
+    eventId: context?.eventId,
+    memberUserId: context?.memberUserId,
+    status: "released_for_retry",
+  });
 }

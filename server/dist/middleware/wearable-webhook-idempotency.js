@@ -5,6 +5,7 @@ exports.finalizeWearableWebhookEvent = finalizeWearableWebhookEvent;
 const env_1 = require("../config/env");
 const client_1 = require("../cache/client");
 const http_error_1 = require("./http-error");
+const logger_1 = require("../utils/logger");
 const WEBHOOK_DEDUPE_PREFIX = "wearable:webhook:event:";
 const IN_FLIGHT_TTL_SEC = 120;
 function normalizeEventId(raw) {
@@ -30,16 +31,40 @@ async function requireWearableWebhookIdempotency(req, _res, next) {
     const dedupeKey = webhookDedupeKey(provider, eventId);
     const reserved = await (0, client_1.cacheSetIfAbsent)(dedupeKey, "in_flight", IN_FLIGHT_TTL_SEC);
     if (!reserved) {
+        (0, logger_1.logInfo)("wearable_webhook_duplicate", {
+            requestId: req.requestId,
+            provider,
+            eventId,
+        });
         throw new http_error_1.HttpError(409, "DUPLICATE_WEBHOOK_EVENT", "Webhook event already processed or in progress");
     }
+    (0, logger_1.logInfo)("wearable_webhook_reserved", {
+        requestId: req.requestId,
+        provider,
+        eventId,
+    });
     req.wearableWebhook = { provider, eventId, dedupeKey };
     next();
 }
-async function finalizeWearableWebhookEvent(dedupeKey, success) {
+async function finalizeWearableWebhookEvent(dedupeKey, success, context) {
     if (success) {
         await (0, client_1.cacheSet)(dedupeKey, "processed", env_1.env.wearableWebhookDedupeTtlSec);
+        (0, logger_1.logInfo)("wearable_webhook_finalized", {
+            requestId: context?.requestId,
+            provider: context?.provider,
+            eventId: context?.eventId,
+            memberUserId: context?.memberUserId,
+            status: "processed",
+        });
         return;
     }
     await (0, client_1.cacheDel)(dedupeKey);
+    (0, logger_1.logInfo)("wearable_webhook_finalized", {
+        requestId: context?.requestId,
+        provider: context?.provider,
+        eventId: context?.eventId,
+        memberUserId: context?.memberUserId,
+        status: "released_for_retry",
+    });
 }
 //# sourceMappingURL=wearable-webhook-idempotency.js.map

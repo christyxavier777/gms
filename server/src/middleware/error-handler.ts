@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { HttpError } from "./http-error";
-import { logError } from "../utils/logger";
+import { logError, logInfo } from "../utils/logger";
 
 // Final error boundary for unhandled application errors.
 export function errorHandlerMiddleware(
@@ -77,6 +77,15 @@ export function errorHandlerMiddleware(
   }
 
   if (err instanceof HttpError) {
+    if (req.path === "/integrations/wearables/webhook") {
+      logInfo("wearable_webhook_rejected", {
+        requestId: req.requestId,
+        code: err.code,
+        status: err.status,
+        provider: req.header("x-wearable-provider") ?? null,
+        eventId: req.header("x-wearable-event-id") ?? null,
+      });
+    }
     if (err.status >= 500) {
       logError("http_error", {
         requestId: req.requestId,

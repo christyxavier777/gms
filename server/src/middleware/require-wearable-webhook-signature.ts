@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { env } from "../config/env";
 import { HttpError } from "./http-error";
 import { verifyWearableWebhookSignature } from "../integrations/webhook-signature";
+import { logInfo } from "../utils/logger";
 
 export async function requireWearableWebhookSignature(
   req: Request,
@@ -24,6 +25,12 @@ export async function requireWearableWebhookSignature(
     signatureHeader: req.header("x-wearable-signature") ?? undefined,
     toleranceSec: env.wearableWebhookToleranceSec,
     secrets: env.wearableWebhookSecrets,
+  });
+
+  logInfo("wearable_webhook_signature_valid", {
+    requestId: req.requestId,
+    provider,
+    eventId: req.header("x-wearable-event-id") ?? null,
   });
 
   next();

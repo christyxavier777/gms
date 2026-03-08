@@ -8,6 +8,7 @@ import { wearableSyncRateLimiter } from "../middleware/rate-limit";
 import { requireAuth } from "../middleware/require-auth";
 import { requireRole } from "../middleware/require-role";
 import { requireWearableWebhookSignature } from "../middleware/require-wearable-webhook-signature";
+import { logError, logInfo } from "../utils/logger";
 import {
   finalizeWearableWebhookEvent,
   requireWearableWebhookIdempotency,
@@ -42,17 +43,50 @@ integrationsRouter.post(
   requireWearableWebhookIdempotency,
   async (req, res) => {
     let dedupeKey: string | undefined = req.wearableWebhook?.dedupeKey;
+    const provider = req.wearableWebhook?.provider;
+    const eventId = req.wearableWebhook?.eventId;
     try {
+      logInfo("wearable_webhook_received", {
+        requestId: req.requestId,
+        provider,
+        eventId,
+      });
+
       const payload = wearableWebhookSyncSchema.parse(req.body);
       const synced = await syncWearableProgressForMember(payload.memberUserId, payload);
       if (dedupeKey) {
-        await finalizeWearableWebhookEvent(dedupeKey, true);
+        await finalizeWearableWebhookEvent(dedupeKey, true, {
+          requestId: req.requestId,
+          provider,
+          eventId,
+          memberUserId: payload.memberUserId,
+        });
       }
+      logInfo("wearable_webhook_processed", {
+        requestId: req.requestId,
+        provider,
+        eventId,
+        memberUserId: payload.memberUserId,
+        progressId: synced.progressId,
+      });
       res.status(201).json({ synced });
     } catch (error) {
       if (dedupeKey) {
-        await finalizeWearableWebhookEvent(dedupeKey, false);
+        await finalizeWearableWebhookEvent(dedupeKey, false, {
+          requestId: req.requestId,
+          provider,
+          eventId,
+          memberUserId: typeof req.body?.memberUserId === "string" ? req.body.memberUserId : undefined,
+        });
       }
+      logError("wearable_webhook_failed", {
+        requestId: req.requestId,
+        provider,
+        eventId,
+        memberUserId: typeof req.body?.memberUserId === "string" ? req.body.memberUserId : undefined,
+        errorCode: error instanceof HttpError ? error.code : "UNKNOWN_ERROR",
+        message: error instanceof Error ? error.message : "unknown",
+      });
       if (error instanceof ZodError) {
         throw new HttpError(400, "VALIDATION_ERROR", "Wearable webhook payload is invalid", error.flatten());
       }

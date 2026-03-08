@@ -70,6 +70,15 @@ function errorHandlerMiddleware(err, req, res, _next) {
         return;
     }
     if (err instanceof http_error_1.HttpError) {
+        if (req.path === "/integrations/wearables/webhook") {
+            (0, logger_1.logInfo)("wearable_webhook_rejected", {
+                requestId: req.requestId,
+                code: err.code,
+                status: err.status,
+                provider: req.header("x-wearable-provider") ?? null,
+                eventId: req.header("x-wearable-event-id") ?? null,
+            });
+        }
         if (err.status >= 500) {
             (0, logger_1.logError)("http_error", {
                 requestId: req.requestId,
