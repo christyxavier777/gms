@@ -126,7 +126,7 @@ jobs:
       ADMIN_PASSWORD: ChangeMe123!
       LOADTEST_BASE_URL: http://127.0.0.1:4000
       LOADTEST_ENDPOINT: /dashboard/admin/performance
-      LOADTEST_ENFORCE_SLO: "true"
+      LOADTEST_ENFORCE_SLO: "false"
       LOADTEST_CONNECTIONS: "100"
       LOADTEST_DURATION_SEC: "20"
       LOADTEST_REPORT_PATH: loadtest-dashboard-report.json
@@ -175,6 +175,11 @@ jobs:
 
       - name: Run authenticated dashboard load test
         run: npm run loadtest:dashboard:auth:100
+
+      - name: Validate SLO thresholds from report
+        if: always()
+        run: |
+          node -e "const fs=require('fs');const p=process.env.LOADTEST_REPORT_PATH; if(!fs.existsSync(p)){console.error('Load test report missing:',p);process.exit(1);} const r=JSON.parse(fs.readFileSync(p,'utf8')); const p95=r?.latencyMs?.p95 ?? -1; const p95Th=r?.latencyMs?.thresholdP95 ?? -1; const err=r?.errors?.errorRatePct ?? -1; const errTh=r?.errors?.thresholdPct ?? -1; const latB=Boolean(r?.breached?.latencyP95); const errB=Boolean(r?.breached?.errorRate); console.log('SLO check -> p95:',p95,'threshold:',p95Th,'errorRate%:',err,'threshold%:',errTh); if(latB||errB){console.error('SLO breached:',JSON.stringify(r?.breached)); process.exit(1);}"
 
       - name: Publish load test report summary
         if: always()
