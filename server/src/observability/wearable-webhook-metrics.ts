@@ -1,5 +1,6 @@
 import { createPrismaClient } from "../prisma/client";
 import { logError } from "../utils/logger";
+import { env } from "../config/env";
 
 export type WearableWebhookAuditStatus =
   | "SIGNATURE_VALID"
@@ -27,6 +28,15 @@ const prisma = createPrismaClient();
 const DB_FALLBACK_COOLDOWN_MS = 30_000;
 let dbUnavailableUntilMs = 0;
 let dbWriteInFlight = false;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_resolve, reject) => {
+      setTimeout(() => reject(new Error("AUDIT_DB_TIMEOUT")), timeoutMs);
+    }),
+  ]);
+}
 
 function prune(nowMs: number): void {
   const minTs = nowMs - RETENTION_MS;
@@ -90,8 +100,8 @@ export function recordWearableWebhookAudit(
   }
   dbWriteInFlight = true;
 
-  void prisma.wearableWebhookAuditEvent
-    .create({
+  void withTimeout(
+    prisma.wearableWebhookAuditEvent.create({
       data: {
         provider,
         status,
@@ -101,7 +111,9 @@ export function recordWearableWebhookAudit(
         ...(meta?.errorCode ? { errorCode: meta.errorCode } : {}),
         ...(meta?.message ? { message: meta.message.slice(0, 500) } : {}),
       },
-    })
+    }),
+    env.wearableAuditDbTimeoutMs,
+  )
     .catch((error: unknown) => {
       dbUnavailableUntilMs = Date.now() + DB_FALLBACK_COOLDOWN_MS;
       logError("wearable_webhook_audit_persist_failed", {
@@ -134,10 +146,13 @@ export async function getWearableWebhookAuditSnapshot(windowMinutes: number): Pr
   }
 
   try {
-    const rows = await prisma.wearableWebhookAuditEvent.findMany({
-      where: { createdAt: { gte: minDate } },
-      select: { provider: true, status: true },
-    });
+    const rows = await withTimeout(
+      prisma.wearableWebhookAuditEvent.findMany({
+        where: { createdAt: { gte: minDate } },
+        select: { provider: true, status: true },
+      }),
+      env.wearableAuditDbTimeoutMs,
+    );
 
     const byStatus: Record<string, number> = {};
     const byProvider: Record<string, { total: number; byStatus: Record<string, number> }> = {};
@@ -157,8 +172,11 @@ export async function getWearableWebhookAuditSnapshot(windowMinutes: number): Pr
       byProvider,
       source: "database",
     };
-  } catch {
+  } catch (error) {
     dbUnavailableUntilMs = Date.now() + DB_FALLBACK_COOLDOWN_MS;
+    logError("wearable_webhook_audit_read_fallback", {
+      error: error instanceof Error ? error.message : "unknown",
+    });
     const fallback = aggregateEvents(windowMinutes, now);
     return {
       ...fallback,

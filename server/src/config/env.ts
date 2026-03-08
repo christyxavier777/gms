@@ -34,6 +34,7 @@ export const env = {
   wearableSyncRateLimitMax: Number(process.env.WEARABLE_SYNC_RATE_LIMIT_MAX ?? "30"),
   wearableWebhookToleranceSec: Number(process.env.WEARABLE_WEBHOOK_TOLERANCE_SEC ?? "300"),
   wearableWebhookDedupeTtlSec: Number(process.env.WEARABLE_WEBHOOK_DEDUPE_TTL_SEC ?? "86400"),
+  wearableAuditDbTimeoutMs: Number(process.env.WEARABLE_AUDIT_DB_TIMEOUT_MS ?? "250"),
   wearableWebhookSecrets: {
     fitbit: process.env.WEARABLE_WEBHOOK_SECRET_FITBIT?.trim() ?? "",
     appleWatch: process.env.WEARABLE_WEBHOOK_SECRET_APPLE_WATCH?.trim() ?? "",
@@ -68,6 +69,7 @@ if (
   Number.isNaN(env.wearableSyncRateLimitMax) ||
   Number.isNaN(env.wearableWebhookToleranceSec) ||
   Number.isNaN(env.wearableWebhookDedupeTtlSec) ||
+  Number.isNaN(env.wearableAuditDbTimeoutMs) ||
   Number.isNaN(env.dashboardCacheTtlSec) ||
   Number.isNaN(env.sloLatencyP95Ms) ||
   Number.isNaN(env.sloErrorRatePct)
