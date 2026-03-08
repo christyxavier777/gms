@@ -4,25 +4,20 @@
 
 This repository contains the client-side application for the Gym Management System.
 
-The current client is responsible for presenting a public-facing landing experience, including marketing content and onboarding-focused user interface sections.
-
-Backend responsibilities such as business logic, data persistence, authentication, and APIs are handled in a separate backend repository and are intentionally out of scope here.
+The client includes public pages, authentication views, role-based dashboards, and onboarding flows connected to the backend API.
 
 ## Scope (Current)
 
-At this stage, the frontend scope is limited to a landing page experience.
-
-Included sections:
-- Header
-- Hero
-- Features
-- Call-to-Action (CTA)
-- Footer
+Included areas:
+- Public landing experience (Header, Hero, Features, CTA, Footer)
+- Authentication and registration flow
+- Two-step member onboarding with package preselection handoff to subscriptions
+- Role-based dashboards and operational pages (plans, subscriptions, progress)
 
 Current implementation focus:
 - Responsive layouts across mobile, tablet, and desktop
 - Accessible UI patterns (semantic structure, readable contrast, keyboard-friendly interactions)
-- No data fetching and no backend integration
+- Integration with backend authentication/session and domain endpoints
 
 ## Tech Stack
 
@@ -84,20 +79,16 @@ npm run preview
 
 ## Environment Variables
 
-No environment variables are required at this stage.
+`VITE_API_URL` can be used to override API base URL (defaults to `http://localhost:4000`).
 
 ## Out of Scope (Explicit)
 
-- Authentication
-- Dashboards
-- Backend integration
 - Payments
 - Analytics
 - Mobile applications
 
 ## Future Work
 
-- Integrate with backend services
-- Add authentication flows
-- Build user dashboards by role
-- Introduce subscription-related views
+- UI/UX refinement of dashboard and onboarding micro-interactions
+- End-to-end frontend test coverage
+- Release-ready style/token documentation

@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
-
-const PLAN_CATALOG = [
-  { key: 'basic-monthly', name: 'Basic Monthly', priceInr: 1249, durationDays: 30, perks: 'Gym floor access + starter plan' },
-  { key: 'pro-quarterly', name: 'Pro Quarterly', priceInr: 3499, durationDays: 90, perks: 'Trainer check-ins + diet guidance' },
-  { key: 'elite-annual', name: 'Elite Annual', priceInr: 6999, durationDays: 365, perks: 'Priority coaching + premium tracking' },
-]
+import { PLAN_CATALOG } from '../utils/planCatalog'
 
 function toInputDate(value) {
   try {
@@ -26,6 +22,7 @@ function addDays(dateInput, days) {
 
 export default function Subscriptions() {
   const { token, user } = useAuth()
+  const location = useLocation()
   const isAdmin = user?.role === 'ADMIN'
   const isMember = user?.role === 'MEMBER'
 
@@ -44,6 +41,19 @@ export default function Subscriptions() {
     startDate: today,
     endDate: addDays(today, PLAN_CATALOG[0].durationDays),
   })
+
+  useEffect(() => {
+    const preselectedPlanKey = location.state?.preselectedPlanKey
+    if (!preselectedPlanKey) return
+    const plan = PLAN_CATALOG.find((item) => item.key === preselectedPlanKey)
+    if (!plan) return
+    setSelectedPlanKey(plan.key)
+    setForm((prev) => ({
+      ...prev,
+      planName: plan.name,
+      endDate: addDays(prev.startDate, plan.durationDays),
+    }))
+  }, [location.state])
 
   const loadData = useCallback(async () => {
     if (!token) return
@@ -193,6 +203,11 @@ export default function Subscriptions() {
 
           <form onSubmit={handleCreate} className="border border-[#2f2f2f] bg-[#111111] p-5">
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Create Subscription</h2>
+            {location.state?.onboardingName && (
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.08em] text-[#ff7a45]">
+                Welcome {location.state.onboardingName}. Package preference preselected from onboarding.
+              </p>
+            )}
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               {PLAN_CATALOG.map((plan) => (
                 <button
