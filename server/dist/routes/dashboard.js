@@ -13,6 +13,8 @@ const cache_1 = require("../dashboard/cache");
 const perf_metrics_1 = require("../observability/perf-metrics");
 const cache_metrics_1 = require("../observability/cache-metrics");
 const wearable_webhook_metrics_1 = require("../observability/wearable-webhook-metrics");
+const wearable_webhook_retention_1 = require("../observability/wearable-webhook-retention");
+const env_1 = require("../config/env");
 // Read-only role-specific dashboard endpoints.
 exports.dashboardRouter = (0, express_1.Router)();
 exports.dashboardRouter.get("/dashboard/admin", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (_req, res) => {
@@ -37,6 +39,12 @@ exports.dashboardRouter.get("/dashboard/admin/integrations/wearables/audit", req
     const windowMinutes = Number.isFinite(requestedWindow) ? Math.min(1440, Math.max(1, requestedWindow)) : 60;
     const audit = await (0, wearable_webhook_metrics_1.getWearableWebhookAuditSnapshot)(windowMinutes);
     res.status(200).json({ audit });
+});
+exports.dashboardRouter.post("/dashboard/admin/integrations/wearables/audit/cleanup", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
+    const requestedRetention = Number(req.query.retentionDays ?? env_1.env.wearableAuditRetentionDays);
+    const retentionDays = Number.isFinite(requestedRetention) ? Math.min(365, Math.max(1, requestedRetention)) : env_1.env.wearableAuditRetentionDays;
+    const result = await (0, wearable_webhook_retention_1.cleanupWearableWebhookAuditEvents)(retentionDays);
+    res.status(200).json({ cleanup: result });
 });
 exports.dashboardRouter.get("/dashboard/trainer", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.TRAINER), async (req, res) => {
     try {

@@ -82,6 +82,8 @@ server/
 | `WEARABLE_WEBHOOK_TOLERANCE_SEC` | No | `300` | Max allowed signature timestamp drift for wearable webhooks |
 | `WEARABLE_WEBHOOK_DEDUPE_TTL_SEC` | No | `86400` | Retention window for processed webhook event IDs (idempotency) |
 | `WEARABLE_AUDIT_DB_TIMEOUT_MS` | No | `250` | Timeout for wearable audit DB reads/writes before memory fallback |
+| `WEARABLE_AUDIT_RETENTION_DAYS` | No | `30` | Retention period for persisted wearable webhook audit rows |
+| `WEARABLE_AUDIT_CLEANUP_INTERVAL_MS` | No | `3600000` | Background cleanup interval for audit row retention |
 | `WEARABLE_WEBHOOK_SECRET_FITBIT` | No | - | HMAC secret for Fitbit webhook signature validation |
 | `WEARABLE_WEBHOOK_SECRET_APPLE_WATCH` | No | - | HMAC secret for Apple Watch webhook signature validation |
 | `WEARABLE_WEBHOOK_SECRET_GENERIC` | No | - | HMAC secret for generic provider webhook signature validation |
@@ -188,6 +190,7 @@ Recommended environment variables before running:
 - `POST /integrations/wearables/sync` (member): ingests Fitbit/Apple Watch/generic payload, normalizes metrics, and appends a progress entry
 - `POST /integrations/wearables/webhook` (provider): server-to-server signed webhook ingestion (`x-wearable-provider`, `x-wearable-timestamp`, `x-wearable-signature`)
 - `GET /dashboard/admin/integrations/wearables/audit` (admin): recent webhook audit snapshot (`windowMinutes` query, default 60, max 1440)
+- `POST /dashboard/admin/integrations/wearables/audit/cleanup` (admin): manual retention cleanup (`retentionDays` query, default from env)
 
 ## Migration Notes
 

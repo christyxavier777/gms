@@ -10,6 +10,8 @@ import { buildDashboardCacheKey, getDashboardCache, setDashboardCache } from "..
 import { getPerformanceSnapshot, getSloSnapshot } from "../observability/perf-metrics";
 import { getCacheSnapshot } from "../observability/cache-metrics";
 import { getWearableWebhookAuditSnapshot } from "../observability/wearable-webhook-metrics";
+import { cleanupWearableWebhookAuditEvents } from "../observability/wearable-webhook-retention";
+import { env } from "../config/env";
 
 // Read-only role-specific dashboard endpoints.
 export const dashboardRouter = Router();
@@ -38,6 +40,13 @@ dashboardRouter.get("/dashboard/admin/integrations/wearables/audit", requireAuth
   const windowMinutes = Number.isFinite(requestedWindow) ? Math.min(1440, Math.max(1, requestedWindow)) : 60;
   const audit = await getWearableWebhookAuditSnapshot(windowMinutes);
   res.status(200).json({ audit });
+});
+
+dashboardRouter.post("/dashboard/admin/integrations/wearables/audit/cleanup", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
+  const requestedRetention = Number(req.query.retentionDays ?? env.wearableAuditRetentionDays);
+  const retentionDays = Number.isFinite(requestedRetention) ? Math.min(365, Math.max(1, requestedRetention)) : env.wearableAuditRetentionDays;
+  const result = await cleanupWearableWebhookAuditEvents(retentionDays);
+  res.status(200).json({ cleanup: result });
 });
 
 dashboardRouter.get("/dashboard/trainer", requireAuth, requireRole(Role.TRAINER), async (req, res) => {

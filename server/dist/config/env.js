@@ -29,6 +29,8 @@ exports.env = {
     wearableWebhookToleranceSec: Number(process.env.WEARABLE_WEBHOOK_TOLERANCE_SEC ?? "300"),
     wearableWebhookDedupeTtlSec: Number(process.env.WEARABLE_WEBHOOK_DEDUPE_TTL_SEC ?? "86400"),
     wearableAuditDbTimeoutMs: Number(process.env.WEARABLE_AUDIT_DB_TIMEOUT_MS ?? "250"),
+    wearableAuditRetentionDays: Number(process.env.WEARABLE_AUDIT_RETENTION_DAYS ?? "30"),
+    wearableAuditCleanupIntervalMs: Number(process.env.WEARABLE_AUDIT_CLEANUP_INTERVAL_MS ?? "3600000"),
     wearableWebhookSecrets: {
         fitbit: process.env.WEARABLE_WEBHOOK_SECRET_FITBIT?.trim() ?? "",
         appleWatch: process.env.WEARABLE_WEBHOOK_SECRET_APPLE_WATCH?.trim() ?? "",
@@ -61,6 +63,8 @@ if (Number.isNaN(exports.env.authRateLimitWindowMs) ||
     Number.isNaN(exports.env.wearableWebhookToleranceSec) ||
     Number.isNaN(exports.env.wearableWebhookDedupeTtlSec) ||
     Number.isNaN(exports.env.wearableAuditDbTimeoutMs) ||
+    Number.isNaN(exports.env.wearableAuditRetentionDays) ||
+    Number.isNaN(exports.env.wearableAuditCleanupIntervalMs) ||
     Number.isNaN(exports.env.dashboardCacheTtlSec) ||
     Number.isNaN(exports.env.sloLatencyP95Ms) ||
     Number.isNaN(exports.env.sloErrorRatePct)) {
