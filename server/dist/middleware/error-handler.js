@@ -10,6 +10,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const env_1 = require("../config/env");
 const http_error_1 = require("./http-error");
 const logger_1 = require("../utils/logger");
+const wearable_webhook_metrics_1 = require("../observability/wearable-webhook-metrics");
 // Final error boundary for unhandled application errors.
 function errorHandlerMiddleware(err, req, res, _next) {
     if (err && typeof err === "object" && "type" in err && err.type === "entity.too.large") {
@@ -71,6 +72,13 @@ function errorHandlerMiddleware(err, req, res, _next) {
     }
     if (err instanceof http_error_1.HttpError) {
         if (req.path === "/integrations/wearables/webhook") {
+            const provider = req.header("x-wearable-provider");
+            if (provider === "FITBIT" || provider === "APPLE_WATCH" || provider === "GENERIC") {
+                (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("REJECTED", provider);
+            }
+            else {
+                (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("REJECTED", "UNKNOWN");
+            }
             (0, logger_1.logInfo)("wearable_webhook_rejected", {
                 requestId: req.requestId,
                 code: err.code,

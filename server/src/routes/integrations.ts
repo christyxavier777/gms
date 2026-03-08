@@ -9,6 +9,7 @@ import { requireAuth } from "../middleware/require-auth";
 import { requireRole } from "../middleware/require-role";
 import { requireWearableWebhookSignature } from "../middleware/require-wearable-webhook-signature";
 import { logError, logInfo } from "../utils/logger";
+import { recordWearableWebhookAudit } from "../observability/wearable-webhook-metrics";
 import {
   finalizeWearableWebhookEvent,
   requireWearableWebhookIdempotency,
@@ -51,6 +52,9 @@ integrationsRouter.post(
         provider,
         eventId,
       });
+      if (provider) {
+        recordWearableWebhookAudit("RECEIVED", provider);
+      }
 
       const payload = wearableWebhookSyncSchema.parse(req.body);
       const synced = await syncWearableProgressForMember(payload.memberUserId, payload);
@@ -69,6 +73,9 @@ integrationsRouter.post(
         memberUserId: payload.memberUserId,
         progressId: synced.progressId,
       });
+      if (provider) {
+        recordWearableWebhookAudit("PROCESSED", provider);
+      }
       res.status(201).json({ synced });
     } catch (error) {
       if (dedupeKey) {
@@ -87,6 +94,9 @@ integrationsRouter.post(
         errorCode: error instanceof HttpError ? error.code : "UNKNOWN_ERROR",
         message: error instanceof Error ? error.message : "unknown",
       });
+      if (provider) {
+        recordWearableWebhookAudit("FAILED", provider);
+      }
       if (error instanceof ZodError) {
         throw new HttpError(400, "VALIDATION_ERROR", "Wearable webhook payload is invalid", error.flatten());
       }

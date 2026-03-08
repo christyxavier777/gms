@@ -186,6 +186,7 @@ Recommended environment variables before running:
 
 - `POST /integrations/wearables/sync` (member): ingests Fitbit/Apple Watch/generic payload, normalizes metrics, and appends a progress entry
 - `POST /integrations/wearables/webhook` (provider): server-to-server signed webhook ingestion (`x-wearable-provider`, `x-wearable-timestamp`, `x-wearable-signature`)
+- `GET /dashboard/admin/integrations/wearables/audit` (admin): recent webhook audit snapshot (`windowMinutes` query, default 60, max 1440)
 
 ## Migration Notes
 

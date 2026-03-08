@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { HttpError } from "./http-error";
 import { logError, logInfo } from "../utils/logger";
+import { recordWearableWebhookAudit } from "../observability/wearable-webhook-metrics";
 
 // Final error boundary for unhandled application errors.
 export function errorHandlerMiddleware(
@@ -78,6 +79,12 @@ export function errorHandlerMiddleware(
 
   if (err instanceof HttpError) {
     if (req.path === "/integrations/wearables/webhook") {
+      const provider = req.header("x-wearable-provider");
+      if (provider === "FITBIT" || provider === "APPLE_WATCH" || provider === "GENERIC") {
+        recordWearableWebhookAudit("REJECTED", provider);
+      } else {
+        recordWearableWebhookAudit("REJECTED", "UNKNOWN");
+      }
       logInfo("wearable_webhook_rejected", {
         requestId: req.requestId,
         code: err.code,

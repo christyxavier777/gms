@@ -5,6 +5,7 @@ const env_1 = require("../config/env");
 const http_error_1 = require("./http-error");
 const webhook_signature_1 = require("../integrations/webhook-signature");
 const logger_1 = require("../utils/logger");
+const wearable_webhook_metrics_1 = require("../observability/wearable-webhook-metrics");
 async function requireWearableWebhookSignature(req, _res, next) {
     const provider = req.header("x-wearable-provider");
     if (provider !== "FITBIT" && provider !== "APPLE_WATCH" && provider !== "GENERIC") {
@@ -26,6 +27,7 @@ async function requireWearableWebhookSignature(req, _res, next) {
         provider,
         eventId: req.header("x-wearable-event-id") ?? null,
     });
+    (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("SIGNATURE_VALID", provider);
     next();
 }
 //# sourceMappingURL=require-wearable-webhook-signature.js.map

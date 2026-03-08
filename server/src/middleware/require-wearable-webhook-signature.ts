@@ -3,6 +3,7 @@ import { env } from "../config/env";
 import { HttpError } from "./http-error";
 import { verifyWearableWebhookSignature } from "../integrations/webhook-signature";
 import { logInfo } from "../utils/logger";
+import { recordWearableWebhookAudit } from "../observability/wearable-webhook-metrics";
 
 export async function requireWearableWebhookSignature(
   req: Request,
@@ -32,6 +33,7 @@ export async function requireWearableWebhookSignature(
     provider,
     eventId: req.header("x-wearable-event-id") ?? null,
   });
+  recordWearableWebhookAudit("SIGNATURE_VALID", provider);
 
   next();
 }

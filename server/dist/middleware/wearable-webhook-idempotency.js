@@ -6,6 +6,7 @@ const env_1 = require("../config/env");
 const client_1 = require("../cache/client");
 const http_error_1 = require("./http-error");
 const logger_1 = require("../utils/logger");
+const wearable_webhook_metrics_1 = require("../observability/wearable-webhook-metrics");
 const WEBHOOK_DEDUPE_PREFIX = "wearable:webhook:event:";
 const IN_FLIGHT_TTL_SEC = 120;
 function normalizeEventId(raw) {
@@ -36,6 +37,7 @@ async function requireWearableWebhookIdempotency(req, _res, next) {
             provider,
             eventId,
         });
+        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("DUPLICATE", provider);
         throw new http_error_1.HttpError(409, "DUPLICATE_WEBHOOK_EVENT", "Webhook event already processed or in progress");
     }
     (0, logger_1.logInfo)("wearable_webhook_reserved", {
@@ -43,6 +45,7 @@ async function requireWearableWebhookIdempotency(req, _res, next) {
         provider,
         eventId,
     });
+    (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("RESERVED", provider);
     req.wearableWebhook = { provider, eventId, dedupeKey };
     next();
 }
@@ -56,6 +59,12 @@ async function finalizeWearableWebhookEvent(dedupeKey, success, context) {
             memberUserId: context?.memberUserId,
             status: "processed",
         });
+        if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
+            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_PROCESSED", context.provider);
+        }
+        else {
+            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_PROCESSED", "UNKNOWN");
+        }
         return;
     }
     await (0, client_1.cacheDel)(dedupeKey);
@@ -66,5 +75,11 @@ async function finalizeWearableWebhookEvent(dedupeKey, success, context) {
         memberUserId: context?.memberUserId,
         status: "released_for_retry",
     });
+    if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
+        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_RELEASED", context.provider);
+    }
+    else {
+        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_RELEASED", "UNKNOWN");
+    }
 }
 //# sourceMappingURL=wearable-webhook-idempotency.js.map

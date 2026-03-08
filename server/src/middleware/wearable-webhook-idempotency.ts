@@ -3,6 +3,7 @@ import { env } from "../config/env";
 import { cacheDel, cacheSet, cacheSetIfAbsent } from "../cache/client";
 import { HttpError } from "./http-error";
 import { logInfo } from "../utils/logger";
+import { recordWearableWebhookAudit } from "../observability/wearable-webhook-metrics";
 
 const WEBHOOK_DEDUPE_PREFIX = "wearable:webhook:event:";
 const IN_FLIGHT_TTL_SEC = 120;
@@ -43,6 +44,7 @@ export async function requireWearableWebhookIdempotency(
       provider,
       eventId,
     });
+    recordWearableWebhookAudit("DUPLICATE", provider);
     throw new HttpError(409, "DUPLICATE_WEBHOOK_EVENT", "Webhook event already processed or in progress");
   }
 
@@ -51,6 +53,7 @@ export async function requireWearableWebhookIdempotency(
     provider,
     eventId,
   });
+  recordWearableWebhookAudit("RESERVED", provider);
   req.wearableWebhook = { provider, eventId, dedupeKey };
   next();
 }
@@ -74,6 +77,11 @@ export async function finalizeWearableWebhookEvent(
       memberUserId: context?.memberUserId,
       status: "processed",
     });
+    if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
+      recordWearableWebhookAudit("FINALIZED_PROCESSED", context.provider);
+    } else {
+      recordWearableWebhookAudit("FINALIZED_PROCESSED", "UNKNOWN");
+    }
     return;
   }
   await cacheDel(dedupeKey);
@@ -84,4 +92,9 @@ export async function finalizeWearableWebhookEvent(
     memberUserId: context?.memberUserId,
     status: "released_for_retry",
   });
+  if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
+    recordWearableWebhookAudit("FINALIZED_RELEASED", context.provider);
+  } else {
+    recordWearableWebhookAudit("FINALIZED_RELEASED", "UNKNOWN");
+  }
 }

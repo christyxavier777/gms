@@ -12,6 +12,7 @@ const service_1 = require("../dashboard/service");
 const cache_1 = require("../dashboard/cache");
 const perf_metrics_1 = require("../observability/perf-metrics");
 const cache_metrics_1 = require("../observability/cache-metrics");
+const wearable_webhook_metrics_1 = require("../observability/wearable-webhook-metrics");
 // Read-only role-specific dashboard endpoints.
 exports.dashboardRouter = (0, express_1.Router)();
 exports.dashboardRouter.get("/dashboard/admin", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (_req, res) => {
@@ -30,6 +31,12 @@ exports.dashboardRouter.get("/dashboard/admin/performance", require_auth_1.requi
     const slo = (0, perf_metrics_1.getSloSnapshot)();
     const cache = (0, cache_metrics_1.getCacheSnapshot)();
     res.status(200).json({ metrics, slo, cache });
+});
+exports.dashboardRouter.get("/dashboard/admin/integrations/wearables/audit", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
+    const requestedWindow = Number(req.query.windowMinutes ?? 60);
+    const windowMinutes = Number.isFinite(requestedWindow) ? Math.min(1440, Math.max(1, requestedWindow)) : 60;
+    const audit = (0, wearable_webhook_metrics_1.getWearableWebhookAuditSnapshot)(windowMinutes);
+    res.status(200).json({ audit });
 });
 exports.dashboardRouter.get("/dashboard/trainer", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.TRAINER), async (req, res) => {
     try {
