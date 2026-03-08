@@ -21,3 +21,11 @@ export const mutationRateLimiter = createDistributedRateLimiter({
   },
   message: "Too many write requests. Please slow down and retry.",
 });
+
+// Dedicated limiter for wearable sync ingestion bursts.
+export const wearableSyncRateLimiter = createDistributedRateLimiter({
+  namespace: "wearable_sync",
+  windowMs: env.wearableSyncRateLimitWindowMs,
+  max: env.wearableSyncRateLimitMax,
+  message: "Too many wearable sync requests. Please retry shortly.",
+});

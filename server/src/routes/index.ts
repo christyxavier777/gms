@@ -11,6 +11,7 @@ import { dashboardRouter } from "./dashboard";
 import { paymentsRouter } from "./payments";
 import { achievementsRouter } from "./achievements";
 import { recommendationsRouter } from "./recommendations";
+import { integrationsRouter } from "./integrations";
 
 // Registers all application routes in one place.
 export const routes = Router();
@@ -27,5 +28,6 @@ routes.use(dashboardRouter);
 routes.use(paymentsRouter);
 routes.use(achievementsRouter);
 routes.use(recommendationsRouter);
+routes.use(integrationsRouter);
 
 

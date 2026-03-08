@@ -77,6 +77,8 @@ server/
 | `AUTH_RATE_LIMIT_MAX` | No | `20` | Max auth requests/window |
 | `MUTATION_RATE_LIMIT_WINDOW_MS` | No | `60000` | Mutation limiter window |
 | `MUTATION_RATE_LIMIT_MAX` | No | `120` | Max write requests/window |
+| `WEARABLE_SYNC_RATE_LIMIT_WINDOW_MS` | No | `60000` | Wearable sync limiter window |
+| `WEARABLE_SYNC_RATE_LIMIT_MAX` | No | `30` | Max wearable sync requests/window |
 
 ## Local Setup
 
@@ -174,6 +176,10 @@ Recommended environment variables before running:
 
 - `GET /me/recommendations` (member): returns personalized BMI/trend-based workout + diet guidance
 - `GET /users/:id/recommendations` (admin/trainer): returns recommendation snapshot for a member with role checks
+
+## Wearable Sync Endpoint
+
+- `POST /integrations/wearables/sync` (member): ingests Fitbit/Apple Watch/generic payload, normalizes metrics, and appends a progress entry
 
 ## Migration Notes
 
