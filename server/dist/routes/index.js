@@ -13,6 +13,7 @@ const progress_1 = require("./progress");
 const dashboard_1 = require("./dashboard");
 const payments_1 = require("./payments");
 const achievements_1 = require("./achievements");
+const recommendations_1 = require("./recommendations");
 // Registers all application routes in one place.
 exports.routes = (0, express_1.Router)();
 exports.routes.use(health_1.healthRouter);
@@ -26,4 +27,5 @@ exports.routes.use(progress_1.progressRouter);
 exports.routes.use(dashboard_1.dashboardRouter);
 exports.routes.use(payments_1.paymentsRouter);
 exports.routes.use(achievements_1.achievementsRouter);
+exports.routes.use(recommendations_1.recommendationsRouter);
 //# sourceMappingURL=index.js.map

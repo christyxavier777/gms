@@ -10,6 +10,7 @@ import { progressRouter } from "./progress";
 import { dashboardRouter } from "./dashboard";
 import { paymentsRouter } from "./payments";
 import { achievementsRouter } from "./achievements";
+import { recommendationsRouter } from "./recommendations";
 
 // Registers all application routes in one place.
 export const routes = Router();
@@ -25,5 +26,6 @@ routes.use(progressRouter);
 routes.use(dashboardRouter);
 routes.use(paymentsRouter);
 routes.use(achievementsRouter);
+routes.use(recommendationsRouter);
 
 

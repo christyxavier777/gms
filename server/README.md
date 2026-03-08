@@ -170,6 +170,11 @@ Recommended environment variables before running:
 - `GET /me/achievements` (member): returns points and earned badge status
 - `GET /users/:id/achievements` (admin/trainer): returns a member's badge summary with role checks
 
+## Adaptive Recommendation Endpoints
+
+- `GET /me/recommendations` (member): returns personalized BMI/trend-based workout + diet guidance
+- `GET /users/:id/recommendations` (admin/trainer): returns recommendation snapshot for a member with role checks
+
 ## Migration Notes
 
 - The active migration history is PostgreSQL baseline in `prisma/migrations/20260307000000_postgres_baseline`.
