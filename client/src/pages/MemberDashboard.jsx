@@ -83,34 +83,34 @@ export default function MemberDashboard() {
         </p>
       )}
 
-      <section className="border border-[#2f2f2f] bg-[#111111] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
+      <section className="border border-white/10 bg-white/5 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)] backdrop-blur-[10px]">
         <h2 className="text-xl font-black uppercase tracking-[0.08em] text-white">Welcome, {displayName}</h2>
-        <p className="mt-4 border-l-4 border-[#E21A2C] pl-3 text-sm font-semibold text-gray-300">
+        <p className="mt-4 border-l-4 border-[#ff8b5f] pl-3 text-sm font-semibold text-gray-300">
           Review your assigned plans and recent fitness progress below.
         </p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((item) => (
-          <article key={item.label} className="border border-[#2f2f2f] bg-[#111111] p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">{item.label}</p>
+          <article key={item.label} className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">{item.label}</p>
             <p className="mt-2 text-3xl font-black text-white">{item.value}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#E21A2C]">{item.hint}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#ff8b5f]">{item.hint}</p>
           </article>
         ))}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <article className="border border-[#2f2f2f] bg-[#111111] p-5 lg:col-span-2">
+        <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px] lg:col-span-2">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Assigned Workout Plans</h2>
           <div className="mt-4 space-y-3">
             {workoutPlans.length === 0 && (
               <p className="text-sm text-gray-300">No workout plan assigned yet.</p>
             )}
             {workoutPlans.map((entry) => (
-              <div key={entry.id} className="flex flex-col gap-2 border border-[#2f2f2f] bg-[#1A1A1A] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div key={entry.id} className="flex flex-col gap-2 border border-white/10 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{entry.title}</p>
+                  <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#ff8b5f]">{entry.title}</p>
                   <p className="mt-1 text-base font-semibold text-white">{entry.description}</p>
                 </div>
                 <p className="text-sm font-medium text-gray-300">Updated: {formatDate(entry.updatedAt)}</p>
@@ -119,14 +119,14 @@ export default function MemberDashboard() {
           </div>
         </article>
 
-        <article className="border border-[#2f2f2f] bg-[#111111] p-5">
+        <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Assigned Diet Plans</h2>
           <div className="mt-4 space-y-3">
             {dietPlans.length === 0 && (
               <p className="text-sm text-gray-300">No diet plan assigned yet.</p>
             )}
             {dietPlans.map((item) => (
-              <div key={item.id} className="border-l-2 border-[#E21A2C] bg-[#1A1A1A] px-3 py-2">
+              <div key={item.id} className="border-l-2 border-[#ff8b5f] bg-black/30 px-3 py-2">
                 <p className="text-sm font-semibold text-white">{item.title}</p>
                 <p className="text-sm text-gray-300">{item.description}</p>
               </div>
@@ -136,14 +136,14 @@ export default function MemberDashboard() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="border border-[#2f2f2f] bg-[#111111] p-5">
+        <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Recent Progress</h2>
           <div className="mt-4 grid gap-3">
             {progressEntries.length === 0 && (
               <p className="text-sm text-gray-300">No progress entries found.</p>
             )}
             {progressEntries.map((entry) => (
-              <div key={entry.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-3">
+              <div key={entry.id} className="border border-white/10 bg-black/30 p-3">
                 <p className="text-sm font-semibold text-gray-300">
                   {formatDate(entry.recordedAt)} | Weight: {entry.weight ?? '-'} | Body Fat: {entry.bodyFat ?? '-'} | BMI: {entry.bmi ?? '-'}
                 </p>
@@ -153,17 +153,17 @@ export default function MemberDashboard() {
           </div>
         </article>
 
-        <article className="border border-[#2f2f2f] bg-[#111111] p-5">
+        <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Subscription</h2>
           <div className="mt-4 space-y-3">
-            <div className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Active Plan</p>
+            <div className="border border-white/10 bg-black/30 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Active Plan</p>
               <p className="mt-1 text-lg font-black text-white">
                 {dashboard?.activeSubscriptionSummary?.planName || (hasLiveData ? 'No active plan' : 'Pro Quarterly')}
               </p>
             </div>
-            <div className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Next Billing Date</p>
+            <div className="border border-white/10 bg-black/30 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Next Billing Date</p>
               <p className="mt-1 text-lg font-black text-white">
                 {dashboard?.activeSubscriptionSummary?.endDate
                   ? formatDate(dashboard.activeSubscriptionSummary.endDate)
@@ -176,11 +176,11 @@ export default function MemberDashboard() {
         </article>
       </section>
 
-      <section className="border border-[#2f2f2f] bg-[#111111] p-5">
+      <section className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
         <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Daily Reminders</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {reminders.map((item) => (
-            <div key={item} className="border-l-2 border-[#E21A2C] bg-[#1A1A1A] px-3 py-2">
+            <div key={item} className="border-l-2 border-[#ff8b5f] bg-black/30 px-3 py-2">
               <p className="text-sm text-gray-300">{item}</p>
             </div>
           ))}

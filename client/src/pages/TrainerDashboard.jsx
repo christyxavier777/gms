@@ -86,21 +86,21 @@ export default function TrainerDashboard() {
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {stats.map((item) => (
-          <article key={item.label} className="border border-[#2f2f2f] bg-[#111111] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
-            <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">{item.label}</p>
+          <article key={item.label} className="border border-white/10 bg-white/5 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)] backdrop-blur-[10px]">
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">{item.label}</p>
             <p className="mt-2 text-3xl font-black text-white">{item.value}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#E21A2C]">{item.hint}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#ff8b5f]">{item.hint}</p>
           </article>
         ))}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <article className="border border-[#2f2f2f] bg-[#111111] p-5 lg:col-span-2">
+        <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px] lg:col-span-2">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Recent Progress</h2>
           <div className="mt-4 space-y-3">
             {entries.map((entry) => (
-              <div key={entry.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#E21A2C]">
+              <div key={entry.id} className="border border-white/10 bg-black/30 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#ff8b5f]">
                   Member ID: {entry.userId}
                 </p>
                 <p className="mt-1 text-sm text-gray-300">Recorded: {formatDate(entry.recordedAt)}</p>
@@ -113,12 +113,12 @@ export default function TrainerDashboard() {
           </div>
         </article>
 
-        <article className="border border-[#2f2f2f] bg-[#111111] p-5">
+        <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Today Schedule</h2>
           <div className="mt-4 space-y-3">
             {todaySchedule.map((session) => (
-              <div key={`${session.time}-${session.member}`} className="border border-[#2f2f2f] bg-[#1A1A1A] p-3">
-                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{session.time}</p>
+              <div key={`${session.time}-${session.member}`} className="border border-white/10 bg-black/30 p-3">
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#ff8b5f]">{session.time}</p>
                 <p className="mt-1 text-sm font-semibold text-white">{session.member}</p>
                 <p className="text-sm text-gray-300">{session.focus}</p>
               </div>
@@ -127,11 +127,11 @@ export default function TrainerDashboard() {
         </article>
       </section>
 
-      <section className="border border-[#2f2f2f] bg-[#111111] p-5">
+      <section className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
         <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Coach Notes</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {['Warm-up review pending', '2 reassessments due', 'Nutrition audit on Friday'].map((note) => (
-            <div key={note} className="border-l-2 border-[#E21A2C] bg-[#1A1A1A] px-3 py-2">
+            <div key={note} className="border-l-2 border-[#ff8b5f] bg-black/30 px-3 py-2">
               <p className="text-sm text-gray-300">{note}</p>
             </div>
           ))}
