@@ -174,6 +174,11 @@ Recommended environment variables before running:
 - Architecture summary: `docs/ARCHITECTURE.md`
 - ERD (Mermaid): `docs/ERD.mmd`
 - Database normalization notes (1NF/2NF/3NF): `docs/ARCHITECTURE.md#normalization-notes-1nf-2nf-3nf`
+- User manual (IEEE style): `docs/USER_MANUAL_IEEE.md`
+- User manual template: `docs/USER_MANUAL_TEMPLATE_IEEE.md`
+- SRS supplement (IEEE oriented): `docs/SRS_SUPPLEMENT_IEEE.md`
+- Operations runbook: `docs/OPS_RUNBOOK.md`
+- Phase 4 release sign-off checklist: `docs/RELEASE_SIGNOFF_PHASE4.md`
 
 ## Gamification Endpoints
 
