@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.__wearableInternals = void 0;
 exports.syncWearableProgress = syncWearableProgress;
+exports.syncWearableProgressForMember = syncWearableProgressForMember;
 const client_1 = require("@prisma/client");
 const bmi_1 = require("../progress/bmi");
 const client_2 = require("../prisma/client");
@@ -73,6 +74,37 @@ async function syncWearableProgress(requester, input) {
         },
     });
     await (0, cache_1.invalidateDashboardCache)("wearable_progress_synced");
+    return {
+        progressId: created.id,
+        recordedAt: created.recordedAt,
+        bmi: created.bmi,
+        dietCategory: created.dietCategory,
+    };
+}
+async function syncWearableProgressForMember(memberUserId, input) {
+    await assertMember(memberUserId);
+    const normalized = normalizeMetrics(input);
+    const dietCategory = normalized.bmi ? (0, bmi_1.categorizeBmi)(normalized.bmi) : null;
+    const created = await prisma.progress.create({
+        data: {
+            userId: memberUserId,
+            recordedById: memberUserId,
+            weight: normalized.weight,
+            height: normalized.height,
+            bodyFat: normalized.bodyFat,
+            bmi: normalized.bmi,
+            dietCategory,
+            notes: normalized.note,
+            recordedAt: normalized.recordedAt,
+        },
+        select: {
+            id: true,
+            recordedAt: true,
+            bmi: true,
+            dietCategory: true,
+        },
+    });
+    await (0, cache_1.invalidateDashboardCache)("wearable_progress_webhook_synced");
     return {
         progressId: created.id,
         recordedAt: created.recordedAt,

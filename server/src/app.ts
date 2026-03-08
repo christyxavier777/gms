@@ -1,4 +1,5 @@
 import express from "express";
+import { Request } from "express";
 import { env } from "./config/env";
 import { routes } from "./routes";
 import { notFoundMiddleware } from "./middleware/not-found";
@@ -44,7 +45,14 @@ export function createApp() {
   );
   app.use(performanceMetricsMiddleware);
   app.use(requestLoggerMiddleware);
-  app.use(express.json({ limit: env.jsonBodyLimit }));
+  app.use(
+    express.json({
+      limit: env.jsonBodyLimit,
+      verify: (req, _res, buf) => {
+        (req as Request).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: false, limit: env.jsonBodyLimit }));
   app.use(sanitizeInputMiddleware);
   app.use("/auth", authRateLimiter);

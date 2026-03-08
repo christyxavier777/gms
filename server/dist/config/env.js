@@ -26,6 +26,12 @@ exports.env = {
     mutationRateLimitMax: Number(process.env.MUTATION_RATE_LIMIT_MAX ?? "120"),
     wearableSyncRateLimitWindowMs: Number(process.env.WEARABLE_SYNC_RATE_LIMIT_WINDOW_MS ?? "60000"),
     wearableSyncRateLimitMax: Number(process.env.WEARABLE_SYNC_RATE_LIMIT_MAX ?? "30"),
+    wearableWebhookToleranceSec: Number(process.env.WEARABLE_WEBHOOK_TOLERANCE_SEC ?? "300"),
+    wearableWebhookSecrets: {
+        fitbit: process.env.WEARABLE_WEBHOOK_SECRET_FITBIT?.trim() ?? "",
+        appleWatch: process.env.WEARABLE_WEBHOOK_SECRET_APPLE_WATCH?.trim() ?? "",
+        generic: process.env.WEARABLE_WEBHOOK_SECRET_GENERIC?.trim() ?? "",
+    },
     redisUrl: process.env.REDIS_URL?.trim() ?? "",
     dashboardCacheTtlSec: Number(process.env.DASHBOARD_CACHE_TTL_SEC ?? "45"),
     sloLatencyP95Ms: Number(process.env.SLO_LATENCY_P95_MS ?? "300"),
@@ -50,6 +56,7 @@ if (Number.isNaN(exports.env.authRateLimitWindowMs) ||
     Number.isNaN(exports.env.mutationRateLimitMax) ||
     Number.isNaN(exports.env.wearableSyncRateLimitWindowMs) ||
     Number.isNaN(exports.env.wearableSyncRateLimitMax) ||
+    Number.isNaN(exports.env.wearableWebhookToleranceSec) ||
     Number.isNaN(exports.env.dashboardCacheTtlSec) ||
     Number.isNaN(exports.env.sloLatencyP95Ms) ||
     Number.isNaN(exports.env.sloErrorRatePct)) {

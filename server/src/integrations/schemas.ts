@@ -3,7 +3,7 @@ import { z } from "zod";
 const metricValue = z.number().positive().nullable().optional();
 const bodyFatValue = z.number().min(0).max(100).nullable().optional();
 
-export const wearableSyncSchema = z
+const wearableSyncBaseSchema = z
   .object({
     source: z.enum(["FITBIT", "APPLE_WATCH", "GENERIC"]),
     recordedAt: z.coerce.date().optional(),
@@ -28,9 +28,20 @@ export const wearableSyncSchema = z
       .optional(),
     note: z.string().trim().max(500).optional(),
   })
-  .strict()
+  .strict();
+
+export const wearableSyncSchema = wearableSyncBaseSchema.refine((input) => Boolean(input.metrics || input.payload), {
+  message: "Either metrics or payload must be provided",
+});
+
+export type WearableSyncInput = z.infer<typeof wearableSyncSchema>;
+
+export const wearableWebhookSyncSchema = wearableSyncBaseSchema
+  .extend({
+    memberUserId: z.string().uuid("memberUserId must be a valid UUID"),
+  })
   .refine((input) => Boolean(input.metrics || input.payload), {
     message: "Either metrics or payload must be provided",
   });
 
-export type WearableSyncInput = z.infer<typeof wearableSyncSchema>;
+export type WearableWebhookSyncInput = z.infer<typeof wearableWebhookSyncSchema>;

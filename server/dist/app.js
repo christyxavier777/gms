@@ -41,7 +41,12 @@ function createApp() {
     }));
     app.use(perf_metrics_1.performanceMetricsMiddleware);
     app.use(request_logger_1.requestLoggerMiddleware);
-    app.use(express_1.default.json({ limit: env_1.env.jsonBodyLimit }));
+    app.use(express_1.default.json({
+        limit: env_1.env.jsonBodyLimit,
+        verify: (req, _res, buf) => {
+            req.rawBody = Buffer.from(buf);
+        },
+    }));
     app.use(express_1.default.urlencoded({ extended: false, limit: env_1.env.jsonBodyLimit }));
     app.use(sanitize_input_1.sanitizeInputMiddleware);
     app.use("/auth", rate_limit_1.authRateLimiter);

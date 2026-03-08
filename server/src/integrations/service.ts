@@ -101,6 +101,43 @@ export async function syncWearableProgress(
   };
 }
 
+export async function syncWearableProgressForMember(
+  memberUserId: string,
+  input: WearableSyncInput,
+): Promise<{ progressId: string; recordedAt: Date; bmi: number | null; dietCategory: DietCategory | null }> {
+  await assertMember(memberUserId);
+  const normalized = normalizeMetrics(input);
+  const dietCategory = normalized.bmi ? categorizeBmi(normalized.bmi) : null;
+
+  const created = await prisma.progress.create({
+    data: {
+      userId: memberUserId,
+      recordedById: memberUserId,
+      weight: normalized.weight,
+      height: normalized.height,
+      bodyFat: normalized.bodyFat,
+      bmi: normalized.bmi,
+      dietCategory,
+      notes: normalized.note,
+      recordedAt: normalized.recordedAt,
+    },
+    select: {
+      id: true,
+      recordedAt: true,
+      bmi: true,
+      dietCategory: true,
+    },
+  });
+
+  await invalidateDashboardCache("wearable_progress_webhook_synced");
+  return {
+    progressId: created.id,
+    recordedAt: created.recordedAt,
+    bmi: created.bmi,
+    dietCategory: created.dietCategory,
+  };
+}
+
 export const __wearableInternals = {
   normalizeMetrics,
 };

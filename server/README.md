@@ -79,6 +79,10 @@ server/
 | `MUTATION_RATE_LIMIT_MAX` | No | `120` | Max write requests/window |
 | `WEARABLE_SYNC_RATE_LIMIT_WINDOW_MS` | No | `60000` | Wearable sync limiter window |
 | `WEARABLE_SYNC_RATE_LIMIT_MAX` | No | `30` | Max wearable sync requests/window |
+| `WEARABLE_WEBHOOK_TOLERANCE_SEC` | No | `300` | Max allowed signature timestamp drift for wearable webhooks |
+| `WEARABLE_WEBHOOK_SECRET_FITBIT` | No | - | HMAC secret for Fitbit webhook signature validation |
+| `WEARABLE_WEBHOOK_SECRET_APPLE_WATCH` | No | - | HMAC secret for Apple Watch webhook signature validation |
+| `WEARABLE_WEBHOOK_SECRET_GENERIC` | No | - | HMAC secret for generic provider webhook signature validation |
 
 ## Local Setup
 
@@ -180,6 +184,7 @@ Recommended environment variables before running:
 ## Wearable Sync Endpoint
 
 - `POST /integrations/wearables/sync` (member): ingests Fitbit/Apple Watch/generic payload, normalizes metrics, and appends a progress entry
+- `POST /integrations/wearables/webhook` (provider): server-to-server signed webhook ingestion (`x-wearable-provider`, `x-wearable-timestamp`, `x-wearable-signature`)
 
 ## Migration Notes
 
