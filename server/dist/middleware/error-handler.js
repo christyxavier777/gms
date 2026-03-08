@@ -73,11 +73,22 @@ function errorHandlerMiddleware(err, req, res, _next) {
     if (err instanceof http_error_1.HttpError) {
         if (req.path === "/integrations/wearables/webhook") {
             const provider = req.header("x-wearable-provider");
+            const eventId = req.header("x-wearable-event-id") ?? undefined;
             if (provider === "FITBIT" || provider === "APPLE_WATCH" || provider === "GENERIC") {
-                (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("REJECTED", provider);
+                (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("REJECTED", provider, {
+                    requestId: req.requestId,
+                    eventId,
+                    errorCode: err.code,
+                    message: err.message,
+                });
             }
             else {
-                (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("REJECTED", "UNKNOWN");
+                (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("REJECTED", "UNKNOWN", {
+                    requestId: req.requestId,
+                    eventId,
+                    errorCode: err.code,
+                    message: err.message,
+                });
             }
             (0, logger_1.logInfo)("wearable_webhook_rejected", {
                 requestId: req.requestId,

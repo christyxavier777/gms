@@ -27,7 +27,10 @@ async function requireWearableWebhookSignature(req, _res, next) {
         provider,
         eventId: req.header("x-wearable-event-id") ?? null,
     });
-    (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("SIGNATURE_VALID", provider);
+    (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("SIGNATURE_VALID", provider, {
+        requestId: req.requestId,
+        eventId: req.header("x-wearable-event-id") ?? undefined,
+    });
     next();
 }
 //# sourceMappingURL=require-wearable-webhook-signature.js.map

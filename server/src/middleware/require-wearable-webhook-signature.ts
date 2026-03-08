@@ -33,7 +33,10 @@ export async function requireWearableWebhookSignature(
     provider,
     eventId: req.header("x-wearable-event-id") ?? null,
   });
-  recordWearableWebhookAudit("SIGNATURE_VALID", provider);
+  recordWearableWebhookAudit("SIGNATURE_VALID", provider, {
+    requestId: req.requestId,
+    eventId: req.header("x-wearable-event-id") ?? undefined,
+  });
 
   next();
 }

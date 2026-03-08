@@ -37,7 +37,10 @@ async function requireWearableWebhookIdempotency(req, _res, next) {
             provider,
             eventId,
         });
-        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("DUPLICATE", provider);
+        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("DUPLICATE", provider, {
+            requestId: req.requestId,
+            eventId,
+        });
         throw new http_error_1.HttpError(409, "DUPLICATE_WEBHOOK_EVENT", "Webhook event already processed or in progress");
     }
     (0, logger_1.logInfo)("wearable_webhook_reserved", {
@@ -45,7 +48,10 @@ async function requireWearableWebhookIdempotency(req, _res, next) {
         provider,
         eventId,
     });
-    (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("RESERVED", provider);
+    (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("RESERVED", provider, {
+        requestId: req.requestId,
+        eventId,
+    });
     req.wearableWebhook = { provider, eventId, dedupeKey };
     next();
 }
@@ -60,10 +66,18 @@ async function finalizeWearableWebhookEvent(dedupeKey, success, context) {
             status: "processed",
         });
         if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
-            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_PROCESSED", context.provider);
+            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_PROCESSED", context.provider, {
+                requestId: context?.requestId,
+                eventId: context?.eventId,
+                memberUserId: context?.memberUserId,
+            });
         }
         else {
-            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_PROCESSED", "UNKNOWN");
+            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_PROCESSED", "UNKNOWN", {
+                requestId: context?.requestId,
+                eventId: context?.eventId,
+                memberUserId: context?.memberUserId,
+            });
         }
         return;
     }
@@ -76,10 +90,18 @@ async function finalizeWearableWebhookEvent(dedupeKey, success, context) {
         status: "released_for_retry",
     });
     if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
-        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_RELEASED", context.provider);
+        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_RELEASED", context.provider, {
+            requestId: context?.requestId,
+            eventId: context?.eventId,
+            memberUserId: context?.memberUserId,
+        });
     }
     else {
-        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_RELEASED", "UNKNOWN");
+        (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FINALIZED_RELEASED", "UNKNOWN", {
+            requestId: context?.requestId,
+            eventId: context?.eventId,
+            memberUserId: context?.memberUserId,
+        });
     }
 }
 //# sourceMappingURL=wearable-webhook-idempotency.js.map

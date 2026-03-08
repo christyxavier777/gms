@@ -41,7 +41,10 @@ exports.integrationsRouter.post("/integrations/wearables/webhook", rate_limit_1.
             eventId,
         });
         if (provider) {
-            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("RECEIVED", provider);
+            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("RECEIVED", provider, {
+                requestId: req.requestId,
+                eventId,
+            });
         }
         const payload = schemas_1.wearableWebhookSyncSchema.parse(req.body);
         const synced = await (0, service_1.syncWearableProgressForMember)(payload.memberUserId, payload);
@@ -61,7 +64,11 @@ exports.integrationsRouter.post("/integrations/wearables/webhook", rate_limit_1.
             progressId: synced.progressId,
         });
         if (provider) {
-            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("PROCESSED", provider);
+            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("PROCESSED", provider, {
+                requestId: req.requestId,
+                eventId,
+                memberUserId: payload.memberUserId,
+            });
         }
         res.status(201).json({ synced });
     }
@@ -83,7 +90,13 @@ exports.integrationsRouter.post("/integrations/wearables/webhook", rate_limit_1.
             message: error instanceof Error ? error.message : "unknown",
         });
         if (provider) {
-            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FAILED", provider);
+            (0, wearable_webhook_metrics_1.recordWearableWebhookAudit)("FAILED", provider, {
+                requestId: req.requestId,
+                eventId,
+                memberUserId: typeof req.body?.memberUserId === "string" ? req.body.memberUserId : undefined,
+                errorCode: error instanceof http_error_1.HttpError ? error.code : "UNKNOWN_ERROR",
+                message: error instanceof Error ? error.message : "unknown",
+            });
         }
         if (error instanceof zod_1.ZodError) {
             throw new http_error_1.HttpError(400, "VALIDATION_ERROR", "Wearable webhook payload is invalid", error.flatten());

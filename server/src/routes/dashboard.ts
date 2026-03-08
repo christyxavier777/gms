@@ -36,7 +36,7 @@ dashboardRouter.get("/dashboard/admin/performance", requireAuth, requireRole(Rol
 dashboardRouter.get("/dashboard/admin/integrations/wearables/audit", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   const requestedWindow = Number(req.query.windowMinutes ?? 60);
   const windowMinutes = Number.isFinite(requestedWindow) ? Math.min(1440, Math.max(1, requestedWindow)) : 60;
-  const audit = getWearableWebhookAuditSnapshot(windowMinutes);
+  const audit = await getWearableWebhookAuditSnapshot(windowMinutes);
   res.status(200).json({ audit });
 });
 

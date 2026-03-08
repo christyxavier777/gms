@@ -37,6 +37,25 @@ enum PaymentStatus {
   FAILED
 }
 
+enum WearableWebhookProvider {
+  FITBIT
+  APPLE_WATCH
+  GENERIC
+  UNKNOWN
+}
+
+enum WearableWebhookAuditStatus {
+  SIGNATURE_VALID
+  RESERVED
+  DUPLICATE
+  RECEIVED
+  PROCESSED
+  FAILED
+  REJECTED
+  FINALIZED_PROCESSED
+  FINALIZED_RELEASED
+}
+
 model User {
   id                    String                    @id @default(uuid())
   name                  String
@@ -166,4 +185,21 @@ model Payment {
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
+}
+
+model WearableWebhookAuditEvent {
+  id           String                     @id @default(uuid())
+  provider     WearableWebhookProvider
+  status       WearableWebhookAuditStatus
+  requestId    String?
+  eventId      String?
+  memberUserId String?
+  errorCode    String?
+  message      String?
+  createdAt    DateTime                   @default(now())
+
+  @@index([createdAt])
+  @@index([provider, createdAt])
+  @@index([status, createdAt])
+  @@index([provider, eventId, createdAt])
 }

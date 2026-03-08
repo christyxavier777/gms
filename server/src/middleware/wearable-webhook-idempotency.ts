@@ -44,7 +44,10 @@ export async function requireWearableWebhookIdempotency(
       provider,
       eventId,
     });
-    recordWearableWebhookAudit("DUPLICATE", provider);
+    recordWearableWebhookAudit("DUPLICATE", provider, {
+      requestId: req.requestId,
+      eventId,
+    });
     throw new HttpError(409, "DUPLICATE_WEBHOOK_EVENT", "Webhook event already processed or in progress");
   }
 
@@ -53,7 +56,10 @@ export async function requireWearableWebhookIdempotency(
     provider,
     eventId,
   });
-  recordWearableWebhookAudit("RESERVED", provider);
+  recordWearableWebhookAudit("RESERVED", provider, {
+    requestId: req.requestId,
+    eventId,
+  });
   req.wearableWebhook = { provider, eventId, dedupeKey };
   next();
 }
@@ -78,9 +84,17 @@ export async function finalizeWearableWebhookEvent(
       status: "processed",
     });
     if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
-      recordWearableWebhookAudit("FINALIZED_PROCESSED", context.provider);
+      recordWearableWebhookAudit("FINALIZED_PROCESSED", context.provider, {
+        requestId: context?.requestId,
+        eventId: context?.eventId,
+        memberUserId: context?.memberUserId,
+      });
     } else {
-      recordWearableWebhookAudit("FINALIZED_PROCESSED", "UNKNOWN");
+      recordWearableWebhookAudit("FINALIZED_PROCESSED", "UNKNOWN", {
+        requestId: context?.requestId,
+        eventId: context?.eventId,
+        memberUserId: context?.memberUserId,
+      });
     }
     return;
   }
@@ -93,8 +107,16 @@ export async function finalizeWearableWebhookEvent(
     status: "released_for_retry",
   });
   if (context?.provider === "FITBIT" || context?.provider === "APPLE_WATCH" || context?.provider === "GENERIC") {
-    recordWearableWebhookAudit("FINALIZED_RELEASED", context.provider);
+    recordWearableWebhookAudit("FINALIZED_RELEASED", context.provider, {
+      requestId: context?.requestId,
+      eventId: context?.eventId,
+      memberUserId: context?.memberUserId,
+    });
   } else {
-    recordWearableWebhookAudit("FINALIZED_RELEASED", "UNKNOWN");
+    recordWearableWebhookAudit("FINALIZED_RELEASED", "UNKNOWN", {
+      requestId: context?.requestId,
+      eventId: context?.eventId,
+      memberUserId: context?.memberUserId,
+    });
   }
 }

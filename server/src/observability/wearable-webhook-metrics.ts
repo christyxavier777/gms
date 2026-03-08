@@ -1,3 +1,6 @@
+import { createPrismaClient } from "../prisma/client";
+import { logError } from "../utils/logger";
+
 export type WearableWebhookAuditStatus =
   | "SIGNATURE_VALID"
   | "RESERVED"
@@ -20,6 +23,10 @@ type AuditEvent = {
 const MAX_EVENTS = 10000;
 const RETENTION_MS = 24 * 60 * 60 * 1000;
 const events: AuditEvent[] = [];
+const prisma = createPrismaClient();
+const DB_FALLBACK_COOLDOWN_MS = 30_000;
+let dbUnavailableUntilMs = 0;
+let dbWriteInFlight = false;
 
 function prune(nowMs: number): void {
   const minTs = nowMs - RETENTION_MS;
@@ -31,23 +38,12 @@ function prune(nowMs: number): void {
   }
 }
 
-export function recordWearableWebhookAudit(
-  status: WearableWebhookAuditStatus,
-  provider: WearableWebhookProvider,
-): void {
-  const now = Date.now();
-  events.push({ ts: now, status, provider });
-  prune(now);
-}
-
-export function getWearableWebhookAuditSnapshot(windowMinutes: number): {
+function aggregateEvents(windowMinutes: number, now: number): {
   windowMinutes: number;
   totalEvents: number;
   byStatus: Record<string, number>;
   byProvider: Record<string, { total: number; byStatus: Record<string, number> }>;
 } {
-  const now = Date.now();
-  prune(now);
   const windowMs = Math.max(1, windowMinutes) * 60 * 1000;
   const minTs = now - windowMs;
   const inWindow = events.filter((e) => e.ts >= minTs);
@@ -70,4 +66,103 @@ export function getWearableWebhookAuditSnapshot(windowMinutes: number): {
     byStatus,
     byProvider,
   };
+}
+
+export function recordWearableWebhookAudit(
+  status: WearableWebhookAuditStatus,
+  provider: WearableWebhookProvider,
+  meta?: {
+    requestId?: string | undefined;
+    eventId?: string | undefined;
+    memberUserId?: string | undefined;
+    errorCode?: string | undefined;
+    message?: string | undefined;
+  },
+): void {
+  const now = Date.now();
+  events.push({ ts: now, status, provider });
+  prune(now);
+  if (now < dbUnavailableUntilMs) {
+    return;
+  }
+  if (dbWriteInFlight) {
+    return;
+  }
+  dbWriteInFlight = true;
+
+  void prisma.wearableWebhookAuditEvent
+    .create({
+      data: {
+        provider,
+        status,
+        ...(meta?.requestId ? { requestId: meta.requestId } : {}),
+        ...(meta?.eventId ? { eventId: meta.eventId } : {}),
+        ...(meta?.memberUserId ? { memberUserId: meta.memberUserId } : {}),
+        ...(meta?.errorCode ? { errorCode: meta.errorCode } : {}),
+        ...(meta?.message ? { message: meta.message.slice(0, 500) } : {}),
+      },
+    })
+    .catch((error: unknown) => {
+      dbUnavailableUntilMs = Date.now() + DB_FALLBACK_COOLDOWN_MS;
+      logError("wearable_webhook_audit_persist_failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    })
+    .finally(() => {
+      dbWriteInFlight = false;
+    });
+}
+
+export async function getWearableWebhookAuditSnapshot(windowMinutes: number): Promise<{
+  windowMinutes: number;
+  totalEvents: number;
+  byStatus: Record<string, number>;
+  byProvider: Record<string, { total: number; byStatus: Record<string, number> }>;
+  source: "database" | "memory_fallback";
+}> {
+  const now = Date.now();
+  prune(now);
+  const windowMs = Math.max(1, windowMinutes) * 60 * 1000;
+  const minDate = new Date(now - windowMs);
+
+  if (now < dbUnavailableUntilMs) {
+    const fallback = aggregateEvents(windowMinutes, now);
+    return {
+      ...fallback,
+      source: "memory_fallback",
+    };
+  }
+
+  try {
+    const rows = await prisma.wearableWebhookAuditEvent.findMany({
+      where: { createdAt: { gte: minDate } },
+      select: { provider: true, status: true },
+    });
+
+    const byStatus: Record<string, number> = {};
+    const byProvider: Record<string, { total: number; byStatus: Record<string, number> }> = {};
+
+    for (const row of rows) {
+      byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
+      const provider = byProvider[row.provider] ?? { total: 0, byStatus: {} };
+      provider.total += 1;
+      provider.byStatus[row.status] = (provider.byStatus[row.status] ?? 0) + 1;
+      byProvider[row.provider] = provider;
+    }
+
+    return {
+      windowMinutes: Math.max(1, windowMinutes),
+      totalEvents: rows.length,
+      byStatus,
+      byProvider,
+      source: "database",
+    };
+  } catch {
+    dbUnavailableUntilMs = Date.now() + DB_FALLBACK_COOLDOWN_MS;
+    const fallback = aggregateEvents(windowMinutes, now);
+    return {
+      ...fallback,
+      source: "memory_fallback",
+    };
+  }
 }

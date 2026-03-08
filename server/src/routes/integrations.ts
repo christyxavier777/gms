@@ -53,7 +53,10 @@ integrationsRouter.post(
         eventId,
       });
       if (provider) {
-        recordWearableWebhookAudit("RECEIVED", provider);
+        recordWearableWebhookAudit("RECEIVED", provider, {
+          requestId: req.requestId,
+          eventId,
+        });
       }
 
       const payload = wearableWebhookSyncSchema.parse(req.body);
@@ -74,7 +77,11 @@ integrationsRouter.post(
         progressId: synced.progressId,
       });
       if (provider) {
-        recordWearableWebhookAudit("PROCESSED", provider);
+        recordWearableWebhookAudit("PROCESSED", provider, {
+          requestId: req.requestId,
+          eventId,
+          memberUserId: payload.memberUserId,
+        });
       }
       res.status(201).json({ synced });
     } catch (error) {
@@ -95,7 +102,13 @@ integrationsRouter.post(
         message: error instanceof Error ? error.message : "unknown",
       });
       if (provider) {
-        recordWearableWebhookAudit("FAILED", provider);
+        recordWearableWebhookAudit("FAILED", provider, {
+          requestId: req.requestId,
+          eventId,
+          memberUserId: typeof req.body?.memberUserId === "string" ? req.body.memberUserId : undefined,
+          errorCode: error instanceof HttpError ? error.code : "UNKNOWN_ERROR",
+          message: error instanceof Error ? error.message : "unknown",
+        });
       }
       if (error instanceof ZodError) {
         throw new HttpError(400, "VALIDATION_ERROR", "Wearable webhook payload is invalid", error.flatten());

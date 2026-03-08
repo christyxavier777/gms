@@ -35,7 +35,7 @@ exports.dashboardRouter.get("/dashboard/admin/performance", require_auth_1.requi
 exports.dashboardRouter.get("/dashboard/admin/integrations/wearables/audit", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
     const requestedWindow = Number(req.query.windowMinutes ?? 60);
     const windowMinutes = Number.isFinite(requestedWindow) ? Math.min(1440, Math.max(1, requestedWindow)) : 60;
-    const audit = (0, wearable_webhook_metrics_1.getWearableWebhookAuditSnapshot)(windowMinutes);
+    const audit = await (0, wearable_webhook_metrics_1.getWearableWebhookAuditSnapshot)(windowMinutes);
     res.status(200).json({ audit });
 });
 exports.dashboardRouter.get("/dashboard/trainer", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.TRAINER), async (req, res) => {
