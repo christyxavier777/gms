@@ -165,6 +165,11 @@ Recommended environment variables before running:
 - ERD (Mermaid): `docs/ERD.mmd`
 - Database normalization notes (1NF/2NF/3NF): `docs/ARCHITECTURE.md#normalization-notes-1nf-2nf-3nf`
 
+## Gamification Endpoints
+
+- `GET /me/achievements` (member): returns points and earned badge status
+- `GET /users/:id/achievements` (admin/trainer): returns a member's badge summary with role checks
+
 ## Migration Notes
 
 - The active migration history is PostgreSQL baseline in `prisma/migrations/20260307000000_postgres_baseline`.
