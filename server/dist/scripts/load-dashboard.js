@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.parseDashboardLoadTestArgsFromProcess = parseDashboardLoadTestArgsFromProcess;
 exports.runDashboardLoadTest = runDashboardLoadTest;
 const autocannon_1 = __importDefault(require("autocannon"));
+const promises_1 = require("node:fs/promises");
 function argValue(name) {
     const index = process.argv.indexOf(name);
     if (index < 0)
@@ -45,6 +46,7 @@ function parseDashboardLoadTestArgsFromProcess() {
     const sloLatencyP95Ms = toPositiveNumber(process.env.SLO_LATENCY_P95_MS, 300);
     const sloErrorRatePct = toPositiveNumber(process.env.SLO_ERROR_RATE_PCT, 1);
     const enforceSlo = toBool(argValue("--enforce-slo") ?? process.env.LOADTEST_ENFORCE_SLO, false);
+    const reportPath = argValue("--report-path") ?? process.env.LOADTEST_REPORT_PATH ?? "";
     return {
         url,
         endpoint,
@@ -56,6 +58,7 @@ function parseDashboardLoadTestArgsFromProcess() {
         sloLatencyP95Ms,
         sloErrorRatePct,
         enforceSlo,
+        reportPath,
     };
 }
 async function runDashboardLoadTest(args) {
@@ -101,7 +104,7 @@ async function runDashboardLoadTest(args) {
     const p95Ms = latency.p95 ?? latency.p97_5 ?? 0;
     const latencyBreached = p95Ms > args.sloLatencyP95Ms;
     const errorRateBreached = errorRatePct > args.sloErrorRatePct;
-    console.log(JSON.stringify({
+    const summary = {
         event: "dashboard_loadtest_summary",
         requests: {
             total: totalRequests,
@@ -123,7 +126,12 @@ async function runDashboardLoadTest(args) {
             latencyP95: latencyBreached,
             errorRate: errorRateBreached,
         },
-    }, null, 2));
+    };
+    console.log(JSON.stringify(summary, null, 2));
+    if (args.reportPath) {
+        await (0, promises_1.writeFile)(args.reportPath, JSON.stringify(summary, null, 2), "utf8");
+        console.log(`loadtest report written to ${args.reportPath}`);
+    }
     if (!args.token) {
         if (!args.sessionCookie) {
             console.warn("No LOADTEST_BEARER_TOKEN or LOADTEST_SESSION_COOKIE set. Protected endpoints may return 401/403 and inflate error rate.");

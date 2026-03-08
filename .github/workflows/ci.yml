@@ -129,6 +129,7 @@ jobs:
       LOADTEST_ENFORCE_SLO: "true"
       LOADTEST_CONNECTIONS: "100"
       LOADTEST_DURATION_SEC: "20"
+      LOADTEST_REPORT_PATH: loadtest-dashboard-report.json
     defaults:
       run:
         working-directory: server
@@ -174,6 +175,25 @@ jobs:
 
       - name: Run authenticated dashboard load test
         run: npm run loadtest:dashboard:auth:100
+
+      - name: Publish load test report summary
+        if: always()
+        run: |
+          if [ -f "$LOADTEST_REPORT_PATH" ]; then
+            echo "## Dashboard Load Test Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat "$LOADTEST_REPORT_PATH" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload load test report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-loadtest-report
+          path: server/loadtest-dashboard-report.json
+          if-no-files-found: warn
 
       - name: Dump server log on failure
         if: failure()

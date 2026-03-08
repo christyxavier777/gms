@@ -137,6 +137,7 @@ Recommended environment variables before running:
 - `LOADTEST_BASE_URL`: Target base URL (default `http://127.0.0.1:4000`)
 - `LOADTEST_ENDPOINT`: Endpoint path (default `/dashboard/admin/performance`)
 - `LOADTEST_ENFORCE_SLO`: Set `true` to exit non-zero when SLO is breached
+- `LOADTEST_REPORT_PATH`: Optional output path for JSON report artifact
 
 ## Security Notes
 

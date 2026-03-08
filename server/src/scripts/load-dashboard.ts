@@ -1,4 +1,5 @@
 import autocannon, { Result } from "autocannon";
+import { writeFile } from "node:fs/promises";
 
 export type DashboardLoadTestArgs = {
   url: string;
@@ -11,6 +12,7 @@ export type DashboardLoadTestArgs = {
   sloLatencyP95Ms: number;
   sloErrorRatePct: number;
   enforceSlo: boolean;
+  reportPath: string;
 };
 
 function argValue(name: string): string | undefined {
@@ -50,6 +52,7 @@ export function parseDashboardLoadTestArgsFromProcess(): DashboardLoadTestArgs {
   const sloLatencyP95Ms = toPositiveNumber(process.env.SLO_LATENCY_P95_MS, 300);
   const sloErrorRatePct = toPositiveNumber(process.env.SLO_ERROR_RATE_PCT, 1);
   const enforceSlo = toBool(argValue("--enforce-slo") ?? process.env.LOADTEST_ENFORCE_SLO, false);
+  const reportPath = argValue("--report-path") ?? process.env.LOADTEST_REPORT_PATH ?? "";
 
   return {
     url,
@@ -62,6 +65,7 @@ export function parseDashboardLoadTestArgsFromProcess(): DashboardLoadTestArgs {
     sloLatencyP95Ms,
     sloErrorRatePct,
     enforceSlo,
+    reportPath,
   };
 }
 
@@ -122,35 +126,36 @@ export async function runDashboardLoadTest(args: DashboardLoadTestArgs): Promise
   const latencyBreached = p95Ms > args.sloLatencyP95Ms;
   const errorRateBreached = errorRatePct > args.sloErrorRatePct;
 
-  console.log(
-    JSON.stringify(
-      {
-        event: "dashboard_loadtest_summary",
-        requests: {
-          total: totalRequests,
-          averagePerSec: result.requests.average ?? 0,
-        },
-        latencyMs: {
-          average: result.latency.average ?? 0,
-          p95: p95Ms,
-          max: result.latency.max ?? 0,
-          thresholdP95: args.sloLatencyP95Ms,
-        },
-        errors: {
-          errors: totalErrors,
-          non2xx: totalNon2xx,
-          errorRatePct: Number(errorRatePct.toFixed(2)),
-          thresholdPct: args.sloErrorRatePct,
-        },
-        breached: {
-          latencyP95: latencyBreached,
-          errorRate: errorRateBreached,
-        },
-      },
-      null,
-      2,
-    ),
-  );
+  const summary = {
+    event: "dashboard_loadtest_summary",
+    requests: {
+      total: totalRequests,
+      averagePerSec: result.requests.average ?? 0,
+    },
+    latencyMs: {
+      average: result.latency.average ?? 0,
+      p95: p95Ms,
+      max: result.latency.max ?? 0,
+      thresholdP95: args.sloLatencyP95Ms,
+    },
+    errors: {
+      errors: totalErrors,
+      non2xx: totalNon2xx,
+      errorRatePct: Number(errorRatePct.toFixed(2)),
+      thresholdPct: args.sloErrorRatePct,
+    },
+    breached: {
+      latencyP95: latencyBreached,
+      errorRate: errorRateBreached,
+    },
+  };
+
+  console.log(JSON.stringify(summary, null, 2));
+
+  if (args.reportPath) {
+    await writeFile(args.reportPath, JSON.stringify(summary, null, 2), "utf8");
+    console.log(`loadtest report written to ${args.reportPath}`);
+  }
 
   if (!args.token) {
     if (!args.sessionCookie) {
