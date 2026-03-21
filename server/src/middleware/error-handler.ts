@@ -57,6 +57,29 @@ export function errorHandlerMiddleware(
     return;
   }
 
+  if (
+    err instanceof Prisma.PrismaClientInitializationError ||
+    err instanceof Prisma.PrismaClientRustPanicError
+  ) {
+    res.status(503).json({
+      error: {
+        code: "DATABASE_UNAVAILABLE",
+        message: "Database is unavailable. Verify DATABASE_URL and database service status.",
+      },
+    });
+    return;
+  }
+
+  if (err instanceof Prisma.PrismaClientUnknownRequestError) {
+    res.status(500).json({
+      error: {
+        code: "DATABASE_ERROR",
+        message: "Database operation failed",
+      },
+    });
+    return;
+  }
+
   if (err instanceof jwt.TokenExpiredError) {
     res.status(401).json({
       error: {

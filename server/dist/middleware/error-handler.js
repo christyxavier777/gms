@@ -52,6 +52,25 @@ function errorHandlerMiddleware(err, req, res, _next) {
         });
         return;
     }
+    if (err instanceof client_1.Prisma.PrismaClientInitializationError ||
+        err instanceof client_1.Prisma.PrismaClientRustPanicError) {
+        res.status(503).json({
+            error: {
+                code: "DATABASE_UNAVAILABLE",
+                message: "Database is unavailable. Verify DATABASE_URL and database service status.",
+            },
+        });
+        return;
+    }
+    if (err instanceof client_1.Prisma.PrismaClientUnknownRequestError) {
+        res.status(500).json({
+            error: {
+                code: "DATABASE_ERROR",
+                message: "Database operation failed",
+            },
+        });
+        return;
+    }
     if (err instanceof jsonwebtoken_1.default.TokenExpiredError) {
         res.status(401).json({
             error: {
