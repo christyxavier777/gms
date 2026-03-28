@@ -2,6 +2,6 @@
 /server/*.log
 /server/*.pid
 /server/tmp.*
+/server/.tmp-*
 /client/*.log
 /client/*.pid
-

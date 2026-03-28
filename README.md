@@ -40,3 +40,6 @@ cd ../client && npm run dev
 - SRS supplement: `server/docs/SRS_SUPPLEMENT_IEEE.md`
 - Ops runbook: `server/docs/OPS_RUNBOOK.md`
 - Release sign-off: `server/docs/RELEASE_SIGNOFF_PHASE4.md`
+- Deployment checklists: `server/docs/DEPLOYMENT_CHECKLISTS.md`
+- Demo data strategy: `server/docs/DEMO_DATA_STRATEGY.md`
+- Monitoring and alert recommendations: `server/docs/MONITORING_ALERTS.md`

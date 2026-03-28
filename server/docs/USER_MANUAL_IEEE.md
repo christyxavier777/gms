@@ -26,7 +26,7 @@ Covered modules:
 
 ### 2.2 Login
 1. Open `/login`.
-2. Enter valid `@gmail.com` email and password.
+2. Enter a registered email address and password.
 3. Submit.
 4. On success, a secure session cookie is issued and role-based dashboard is loaded.
 
@@ -54,9 +54,10 @@ Covered modules:
 
 ## 4. Onboarding (Member)
 1. Open `/register`.
-2. Complete Step 1 profile fields: name, email, phone, password.
-3. Complete Step 2 package preference.
-4. Account is created and user is redirected to subscriptions with preselected package context.
+2. Complete the profile fields: name, email, phone, password, and role.
+3. Select a membership package and continue through the guided activation flow.
+4. Confirm subscription and submit payment details.
+5. Review the final activation status and next steps screen.
 
 ## 5. Functional Modules
 ### 5.1 Plans

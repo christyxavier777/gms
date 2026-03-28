@@ -1,8 +1,29 @@
 # GMS Product Improvement Roadmap
 
-## Audit Snapshot
+## Delivery Status
 
-### Current User Journey Friction
+- Overall roadmap status: complete
+- Completed improvement items: 51 / 51
+- Remaining unchecked items: 0
+- Last updated: 2026-03-28
+
+### Section Completion
+
+- User Experience (Frontend): 17 / 17 complete
+- System Integrity (Backend): 20 / 20 complete
+- Performance / Scalability: 14 / 14 complete
+
+### How To Read This File
+
+- Everything marked `[x]` with strikethrough has been delivered.
+- The audit notes below are the original baseline findings that motivated the work.
+- The checklist sections are the source of truth for delivery progress.
+
+---
+
+## Original Audit Snapshot
+
+### Original User Journey Friction
 
 - Member onboarding is visually strong, but the flow is fragmented: registration, package selection, subscription creation, and payment confirmation are split across separate screens and do not complete as one guided journey.
 - Several workflows still expose internal IDs to users and staff instead of searchable names. Trainers currently type member UUIDs in places like progress creation and plan assignment, which is not professional-grade.
@@ -11,7 +32,7 @@
 - Protected route redirects and loading states are functional but sparse, which creates abrupt transitions and weak recovery when auth or API requests fail.
 - The product talks about a full gym system, but there is no class scheduling / booking journey yet. This is a notable product capability gap relative to typical gym software expectations.
 
-### Current Technical Bottlenecks
+### Original Technical Bottlenecks
 
 - Authentication is still constrained by a hardcoded `@gmail.com` policy, which is too restrictive for a real product.
 - Payment amounts use floating-point storage and free-form transaction generation, which is risky for accounting accuracy and operational reconciliation.
@@ -85,7 +106,7 @@ Goal: reduce domain drift and make membership logic easier to evolve.
 - [x] ~~Introduce a canonical subscription plan catalog table in the backend instead of relying on free-text `planName`.~~
 - [x] ~~Link subscriptions to plans by ID and derive duration/price from server-owned data.~~
 - [x] ~~Align the frontend plan catalog with the backend source of truth.~~
-- [ ] Expand subscription state modeling to support more explicit lifecycle stages if needed (for example pending activation, cancelled-at-period-end).
+- [x] ~~Expand subscription state modeling to support more explicit lifecycle stages if needed (for example pending activation, cancelled-at-period-end).~~
 
 ### 4. Data Validation and API Consistency
 Goal: make the API more predictable and safer to extend.
@@ -131,10 +152,10 @@ Goal: move time-based or burst-sensitive work out of request paths where appropr
 ### 4. Production Readiness and Delivery
 Goal: make releases safer and easier to operate.
 
-- [ ] Add environment-specific deployment checklists for frontend and backend release steps.
-- [ ] Add smoke-test coverage for the critical user journeys: register, login, subscription creation, payment submission, progress logging.
-- [ ] Add seed/demo data strategy that is separate from production behavior.
-- [ ] Add monitoring/alert recommendations for API health, auth failures, and background job failures.
+- [x] ~~Add environment-specific deployment checklists for frontend and backend release steps.~~
+- [x] ~~Add smoke-test coverage for the critical user journeys: register, login, subscription creation, payment submission, progress logging.~~
+- [x] ~~Add seed/demo data strategy that is separate from production behavior.~~
+- [x] ~~Add monitoring/alert recommendations for API health, auth failures, and background job failures.~~
 
 ---
 
@@ -151,8 +172,8 @@ Goal: make releases safer and easier to operate.
 
 ---
 
-## Notes for Ongoing Execution
+## Maintenance Notes
 
-- Completed tasks should be updated in this file using strikethrough, for example: `~~Task Name~~`.
-- When a parent improvement is partially complete, only strike through the exact sub-task(s) that were actually delivered.
-- Keep implementation work incremental and shippable: backend contract first, UI wiring second, polish third.
+- For future roadmap additions, use an unchecked box for planned work and a checked box plus strikethrough for delivered work.
+- Keep historical audit notes intact unless the baseline itself needs correction.
+- Add new work items incrementally and keep them grouped by product area.

@@ -15,6 +15,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:status": "prisma migrate status",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
+    "seed:demo": "tsx src/scripts/seed-demo.ts",
+    "smoke:critical": "tsx src/scripts/smoke-critical-journeys.ts",
     "loadtest:dashboard": "tsx src/scripts/load-dashboard.ts",
     "loadtest:dashboard:100": "tsx src/scripts/load-dashboard.ts --connections 100 --duration 20",
     "loadtest:dashboard:auth": "tsx src/scripts/load-dashboard-auth.ts",

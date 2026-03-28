@@ -84,6 +84,16 @@ server/
 | `ADMIN_NAME` | No | - | Seed admin display name (`seed:admin` only) |
 | `ADMIN_EMAIL` | No | - | Seed admin email address (`seed:admin` only) |
 | `ADMIN_PASSWORD` | No | - | Seed admin password (`seed:admin` only) |
+| `DEMO_EMAIL_DOMAIN` | No | `demo.gms.local` | Email domain used by `seed:demo` personas |
+| `DEMO_ADMIN_PASSWORD` | No | `DemoAdmin123` | Demo admin password for `seed:demo` |
+| `DEMO_TRAINER_PASSWORD` | No | `DemoTrainer123` | Demo trainer password for `seed:demo` |
+| `DEMO_MEMBER_PASSWORD` | No | `DemoMember123` | Shared demo member password for `seed:demo` |
+| `SMOKE_BASE_URL` | No | `http://127.0.0.1:4000` | Base URL targeted by `smoke:critical` |
+| `SMOKE_ADMIN_EMAIL` | No | falls back to `ADMIN_EMAIL` | Admin email used by `smoke:critical` |
+| `SMOKE_ADMIN_PASSWORD` | No | falls back to `ADMIN_PASSWORD` | Admin password used by `smoke:critical` |
+| `SMOKE_MEMBER_PASSWORD` | No | `SmokeTest123` | Password used for the generated smoke-test member |
+| `SMOKE_PLAN_ID` | No | first active plan | Optional explicit membership plan for `smoke:critical` |
+| `SMOKE_UPI_ID` | No | `smoke.member@okaxis` | UPI handle used for smoke-test payment submission |
 | `JSON_BODY_LIMIT` | No | `100kb` | Global JSON/urlencoded request size cap |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | No | `900000` | Shared auth/login throttle window |
 | `AUTH_RATE_LIMIT_MAX` | No | `20` | Max auth requests per IP window and max login attempts per email/IP window |
@@ -133,13 +143,19 @@ npm run prisma:generate
 npm run seed:admin
 ```
 
-6. Run backend
+6. Seed a reusable non-production demo workspace (optional)
+
+```bash
+npm run seed:demo
+```
+
+7. Run backend
 
 ```bash
 npm run dev
 ```
 
-7. Run background jobs worker
+8. Run background jobs worker
 
 ```bash
 npm run jobs:worker
@@ -152,6 +168,35 @@ After `npm run build`, the production worker entrypoint is:
 ```bash
 npm run start:worker
 ```
+
+## Critical Journey Smoke Check
+
+Run the post-deploy smoke path for the highest-value flows:
+
+```bash
+npm run smoke:critical
+```
+
+The script will:
+
+- verify API health and database reachability
+- register a fresh member
+- log in with a session cookie and validate `/me`
+- create an onboarding subscription
+- submit a member payment
+- log in as admin and record a progress entry for the new member
+
+For a local environment, `SMOKE_ADMIN_EMAIL` and `SMOKE_ADMIN_PASSWORD` can be omitted when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are already configured.
+
+## Demo Dataset
+
+Use `npm run seed:demo` in non-production environments to reset and recreate a deterministic workspace with:
+
+- one admin and one trainer
+- four members spanning active, pending activation, ending-soon, and cancelled subscription states
+- seeded payments, progress, trainer assignments, plans, and schedule bookings
+
+The script is intentionally blocked when `NODE_ENV=production`.
 
 ## Dashboard Load Test
 
@@ -189,6 +234,7 @@ The admin performance payload now combines:
 - Split frontend/backend deployment: set `CORS_ALLOWED_ORIGINS` to your deployed frontend URL(s).
 - For cross-site auth cookies, set `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=none`.
 - Keep `TRAINER_INVITE_CODE` and `ADMIN_INVITE_CODE` empty in production unless self-registration is intentionally enabled.
+- Follow the environment-specific release steps in `docs/DEPLOYMENT_CHECKLISTS.md`.
 
 ## Security Notes
 
@@ -219,6 +265,9 @@ The admin performance payload now combines:
 - SRS supplement (IEEE oriented): `docs/SRS_SUPPLEMENT_IEEE.md`
 - Operations runbook: `docs/OPS_RUNBOOK.md`
 - Phase 4 release sign-off checklist: `docs/RELEASE_SIGNOFF_PHASE4.md`
+- Deployment checklists: `docs/DEPLOYMENT_CHECKLISTS.md`
+- Demo data strategy: `docs/DEMO_DATA_STRATEGY.md`
+- Monitoring and alert recommendations: `docs/MONITORING_ALERTS.md`
 
 ## Gamification Endpoints
 

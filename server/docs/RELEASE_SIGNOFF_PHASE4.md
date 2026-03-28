@@ -9,7 +9,7 @@
 ## 2. Preconditions
 - PostgreSQL and Redis reachable in target environment
 - Prisma migrations deployed successfully
-- Admin seed user configured with valid `@gmail.com` email
+- Admin seed user configured with a valid email and known credentials
 - Secrets configured (JWT + webhook HMAC secrets)
 
 ## 3. Verification Checklist
@@ -22,6 +22,7 @@
 - [ ] Login and `/me` session flow works
 - [ ] Role dashboards load by role
 - [ ] Register flow (2-step onboarding) works and preselects package in subscriptions
+- [ ] `npm run smoke:critical` completes against the target environment
 
 ### 3.3 Security Controls
 - [ ] Bcrypt hashing active for registration seed/login accounts
