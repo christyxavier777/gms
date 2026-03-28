@@ -1,3 +1,4 @@
+import { DietCategory } from "@prisma/client";
 import { z } from "zod";
 
 export const createProgressSchema = z
@@ -41,4 +42,20 @@ export const progressIdParamSchema = z.object({
 
 export const progressUserIdParamSchema = z.object({
   userId: z.string().uuid("userId must be a valid UUID"),
+});
+
+export const listProgressQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
+  search: z.string().trim().max(100).default(""),
+  dietCategory: z
+    .enum([
+      DietCategory.UNDERWEIGHT,
+      DietCategory.NORMAL,
+      DietCategory.OVERWEIGHT,
+      DietCategory.OBESE,
+    ])
+    .optional(),
+  sortBy: z.enum(["recordedAt", "createdAt"]).default("recordedAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });

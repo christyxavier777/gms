@@ -1,8 +1,9 @@
-import { Role, SubscriptionStatus } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { trainerCanReadMember } from "../users/service";
 import { buildRecommendation, PersonalizedRecommendation } from "./engine";
+import { getActiveSubscriptionWhere } from "../subscriptions/lifecycle";
 
 const prisma = createPrismaClient();
 
@@ -47,7 +48,7 @@ export async function getMemberRecommendation(memberUserId: string): Promise<{
       where: { userId: memberUserId, recordedAt: { gte: since } },
     }),
     prisma.subscription.count({
-      where: { userId: memberUserId, status: SubscriptionStatus.ACTIVE },
+      where: { userId: memberUserId, ...getActiveSubscriptionWhere() },
     }),
   ]);
 

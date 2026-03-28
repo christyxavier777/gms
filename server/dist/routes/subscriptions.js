@@ -11,6 +11,10 @@ const schemas_1 = require("../subscriptions/schemas");
 const service_1 = require("../subscriptions/service");
 // Subscription lifecycle endpoints.
 exports.subscriptionsRouter = (0, express_1.Router)();
+exports.subscriptionsRouter.get("/membership-plans", async (_req, res) => {
+    const plans = await (0, service_1.listMembershipPlans)();
+    res.status(200).json({ plans });
+});
 exports.subscriptionsRouter.post("/subscriptions", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
     try {
         const payload = schemas_1.createSubscriptionSchema.parse(req.body);
@@ -24,9 +28,33 @@ exports.subscriptionsRouter.post("/subscriptions", require_auth_1.requireAuth, (
         throw error;
     }
 });
-exports.subscriptionsRouter.get("/subscriptions", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (_req, res) => {
-    const subscriptions = await (0, service_1.listSubscriptions)();
-    res.status(200).json({ subscriptions });
+exports.subscriptionsRouter.post("/me/subscription/onboarding", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.MEMBER), async (req, res) => {
+    try {
+        if (!req.auth)
+            throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+        const payload = schemas_1.createOnboardingSubscriptionSchema.parse(req.body);
+        const subscription = await (0, service_1.createOnboardingSubscription)(req.auth.userId, payload.planId);
+        res.status(201).json({ subscription });
+    }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new http_error_1.HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());
+        }
+        throw error;
+    }
+});
+exports.subscriptionsRouter.get("/subscriptions", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
+    try {
+        const query = schemas_1.listSubscriptionsQuerySchema.parse(req.query);
+        const result = await (0, service_1.listSubscriptions)(query);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new http_error_1.HttpError(400, "VALIDATION_ERROR", "Query parameters are invalid", error.flatten());
+        }
+        throw error;
+    }
 });
 exports.subscriptionsRouter.get("/subscriptions/:id", require_auth_1.requireAuth, async (req, res) => {
     try {

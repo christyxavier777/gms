@@ -18,11 +18,12 @@ const helmet = require("helmet");
 // Creates the HTTP application and wires cross-cutting middleware.
 function createApp() {
     const app = (0, express_1.default)();
+    const defaultAllowedOrigins = env_1.env.nodeEnv === "production" ? [] : ["http://localhost:5173", "http://127.0.0.1:5173"];
+    const allowedOrigins = new Set(env_1.env.corsAllowedOrigins.length > 0 ? env_1.env.corsAllowedOrigins : defaultAllowedOrigins);
     app.disable("x-powered-by");
     app.use(request_id_1.requestIdMiddleware);
     app.use((req, res, next) => {
         const origin = req.header("origin");
-        const allowedOrigins = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
         if (origin && allowedOrigins.has(origin)) {
             res.header("Access-Control-Allow-Origin", origin);
             res.header("Vary", "Origin");

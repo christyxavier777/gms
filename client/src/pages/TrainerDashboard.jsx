@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
+import DashboardLoadingState from '../components/DashboardLoadingState'
 import DashboardLayout from '../components/DashboardLayout'
+import StatusBanner from '../components/StatusBanner'
+import WorkflowEmptyState from '../components/WorkflowEmptyState'
 import { useAuth } from '../context/AuthContext'
-import { api } from '../services/api'
+import { getCombinedServerStateError } from '../server-state/errors'
+import { useAccessibleMembersQuery, useTrainerDashboardQuery } from '../server-state/queries'
 
 function formatDate(date) {
   try {
@@ -13,75 +16,99 @@ function formatDate(date) {
 
 export default function TrainerDashboard() {
   const { token } = useAuth()
-  const [dashboard, setDashboard] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const dashboardQuery = useTrainerDashboardQuery(token, 8)
+  const membersQuery = useAccessibleMembersQuery(token)
+  const dashboard = dashboardQuery.data?.dashboard ?? null
+  const rosterMembers = membersQuery.data?.members ?? []
+  const loading = dashboardQuery.isPending || membersQuery.isPending
+  const error = getCombinedServerStateError(
+    [dashboardQuery, membersQuery],
+    'Failed to load trainer dashboard.',
+  )
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      if (!token) return
-      try {
-        setLoading(true)
-        setError('')
-        const data = await api.getTrainerDashboard(token, 8)
-        setDashboard(data.dashboard)
-      } catch (err) {
-        setError(err?.message || 'Failed to load trainer dashboard.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDashboard()
-  }, [token])
+  if (loading) {
+    return (
+      <DashboardLayout title="Trainer">
+        <DashboardLoadingState label="Loading trainer dashboard" summaryCount={3} />
+      </DashboardLayout>
+    )
+  }
 
   const liveEntries = dashboard?.recentProgressEntries || []
-  const demoEntries = [
-    {
-      id: 'demo-1',
-      userId: 'MEM-104',
-      recordedAt: new Date().toISOString(),
-      weight: 78.4,
-      bodyFat: 22.1,
-      bmi: 25.5,
-      notes: 'Improved squat depth and knee stability.',
-    },
-    {
-      id: 'demo-2',
-      userId: 'MEM-088',
-      recordedAt: new Date(Date.now() - 86400000).toISOString(),
-      weight: 64.2,
-      bodyFat: 18.9,
-      bmi: 22.2,
-      notes: 'Cardio adherence up to 5 sessions/week.',
-    },
-  ]
-  const entries = liveEntries.length > 0 ? liveEntries : demoEntries
+  const entries = liveEntries
 
-  const assignedMembers = Number(dashboard?.assignedMembersCount ?? 0)
+  const assignedMembers = rosterMembers.length
   const plansCreated = Number(dashboard?.plansCreatedByTrainer ?? 0)
-  const isPresentationMode = assignedMembers === 0 && plansCreated === 0 && liveEntries.length === 0
+  const noRoster = assignedMembers === 0
+  const noPlans = plansCreated === 0
+  const noProgress = entries.length === 0
+
+  const formatMemberLabel = (memberId) => {
+    const member = rosterMembers.find((item) => item.id === memberId)
+    return member ? `${member.name} (${member.email})` : memberId
+  }
 
   const stats = [
-    { label: 'Assigned Members', value: isPresentationMode ? 34 : assignedMembers, hint: 'Current roster' },
-    { label: 'Plans Created', value: isPresentationMode ? 27 : plansCreated, hint: 'Workout + diet' },
+    { label: 'Roster Members', value: assignedMembers, hint: 'Assigned by admin' },
+    { label: 'Plans Created', value: plansCreated, hint: 'Workout + diet' },
     { label: 'Recent Progress Entries', value: entries.length, hint: 'Latest updates' },
   ]
 
-  const todaySchedule = [
-    { time: '06:30 AM', member: 'Rahul Mehta', focus: 'Lower Body Strength' },
-    { time: '08:00 AM', member: 'Sara Collins', focus: 'Conditioning + Core' },
-    { time: '05:30 PM', member: 'Neha Sharma', focus: 'Hypertrophy Day 3' },
-  ]
+  const todaySchedule = []
 
   return (
     <DashboardLayout title="Trainer">
-      {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading dashboard...</p>}
-      {error && <p className="text-sm font-semibold text-[#E21A2C]">{error}</p>}
-      {isPresentationMode && !loading && (
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
-          Presentation mode: showing representative trainer activity.
-        </p>
+      {error && <StatusBanner message={error} />}
+
+      {!loading && noRoster && (
+        <WorkflowEmptyState
+          eyebrow="Trainer Setup"
+          title="Your coaching roster is waiting on admin assignment"
+          description="You can log progress only after members are assigned to your trainer roster. Once those members are visible, create plan templates and start recording their first assessment check-ins."
+          notes={[
+            'Admins assign members to your trainer roster before they appear in your workflow.',
+            'You can create workout and diet templates now in the Plans area.',
+            'After your roster is ready, use Progress to log the first metrics and notes.',
+          ]}
+          actions={[
+            { label: 'Open Plans', to: '/plans' },
+            { label: 'Open Progress', to: '/progress', variant: 'secondary' },
+          ]}
+        />
+      )}
+
+      {!loading && !noRoster && noPlans && (
+        <WorkflowEmptyState
+          eyebrow="Next Step"
+          title="Your roster is ready for its first plan templates"
+          description="Members are assigned to you, but they still need workout and diet plans. Create the templates now so admin can attach them to your roster and members can see them in their dashboards."
+          notes={[
+            `${assignedMembers} member${assignedMembers === 1 ? '' : 's'} currently assigned to your trainer roster.`,
+            'Workout and diet plans you create stay under your ownership.',
+            'Admins handle final plan assignment to members in the current workflow.',
+          ]}
+          actions={[
+            { label: 'Create Plans', to: '/plans' },
+            { label: 'Log Progress Later', to: '/progress', variant: 'secondary' },
+          ]}
+        />
+      )}
+
+      {!loading && !noRoster && !noPlans && noProgress && (
+        <WorkflowEmptyState
+          eyebrow="First Check-In"
+          title="Plans are in place; start logging assessments"
+          description="Your setup is ready for real coaching work. Open the progress page, choose a roster member, and record the first assessment so the dashboard begins to reflect live results."
+          notes={[
+            'Use the BMI and body-fat tools on the progress page if you are starting from measurements.',
+            'Progress history fills this dashboard automatically after the first check-in.',
+            'Recent entries stay scoped to members connected to your coaching workflow.',
+          ]}
+          actions={[
+            { label: 'Record Progress', to: '/progress' },
+            { label: 'Review Plans', to: '/plans', variant: 'secondary' },
+          ]}
+        />
       )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -98,10 +125,19 @@ export default function TrainerDashboard() {
         <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px] lg:col-span-2">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Recent Progress</h2>
           <div className="mt-4 space-y-3">
+            {entries.length === 0 && (
+              <p className="text-sm text-gray-300">
+                {noRoster
+                  ? 'Admins need to assign members to your trainer roster before progress can appear here.'
+                  : noPlans
+                    ? 'Create workout and diet plans first so your coaching workflow can start feeding this dashboard.'
+                    : 'No recent progress entries yet. Record the first assessment from the Progress page.'}
+              </p>
+            )}
             {entries.map((entry) => (
               <div key={entry.id} className="border border-white/10 bg-black/30 p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#ff8b5f]">
-                  Member ID: {entry.userId}
+                  Member: {formatMemberLabel(entry.userId)}
                 </p>
                 <p className="mt-1 text-sm text-gray-300">Recorded: {formatDate(entry.recordedAt)}</p>
                 <p className="mt-1 text-sm text-gray-300">
@@ -116,6 +152,11 @@ export default function TrainerDashboard() {
         <article className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Today Schedule</h2>
           <div className="mt-4 space-y-3">
+            {todaySchedule.length === 0 && (
+              <p className="text-sm text-gray-300">
+                Scheduling is not live yet. Use your roster, plans, and progress entries to run sessions until the timetable workflow is added.
+              </p>
+            )}
             {todaySchedule.map((session) => (
               <div key={`${session.time}-${session.member}`} className="border border-white/10 bg-black/30 p-3">
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#ff8b5f]">{session.time}</p>
@@ -128,9 +169,13 @@ export default function TrainerDashboard() {
       </section>
 
       <section className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
-        <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Coach Notes</h2>
+        <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Coach Checklist</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {['Warm-up review pending', '2 reassessments due', 'Nutrition audit on Friday'].map((note) => (
+          {[
+            'Assign at least one workout and diet plan to each active member',
+            'Record progress after assessment sessions to populate reporting',
+            'Review member adherence before publishing new training blocks',
+          ].map((note) => (
             <div key={note} className="border-l-2 border-[#ff8b5f] bg-black/30 px-3 py-2">
               <p className="text-sm text-gray-300">{note}</p>
             </div>

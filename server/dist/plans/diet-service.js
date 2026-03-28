@@ -50,7 +50,7 @@ async function assertAssignableMember(memberId) {
 // Creates a diet plan owned by ADMIN or TRAINER.
 async function createDietPlan(requester, payload) {
     if (requester.role !== client_1.Role.ADMIN && requester.role !== client_1.Role.TRAINER) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to create diet plans");
+        throw new http_error_1.HttpError(403, "DIET_PLAN_CREATE_FORBIDDEN", "You are not allowed to create diet plans");
     }
     const plan = await prisma.dietPlan.create({
         data: {
@@ -84,7 +84,7 @@ async function getDietPlanById(requester, planId) {
         throw new http_error_1.HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
     }
     if (!canReadDietPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to access this diet plan");
+        throw new http_error_1.HttpError(403, "DIET_PLAN_READ_FORBIDDEN", "You are not allowed to access this diet plan");
     }
     return toSafeDietPlan(plan);
 }
@@ -95,7 +95,7 @@ async function updateDietPlan(requester, planId, payload) {
         throw new http_error_1.HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
     }
     if (!canManageDietPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to modify this diet plan");
+        throw new http_error_1.HttpError(403, "DIET_PLAN_UPDATE_FORBIDDEN", "You are not allowed to modify this diet plan");
     }
     const updated = await prisma.dietPlan.update({
         where: { id: planId },
@@ -114,7 +114,7 @@ async function deleteDietPlan(requester, planId) {
         throw new http_error_1.HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
     }
     if (!canManageDietPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to delete this diet plan");
+        throw new http_error_1.HttpError(403, "DIET_PLAN_DELETE_FORBIDDEN", "You are not allowed to delete this diet plan");
     }
     await prisma.dietPlan.delete({ where: { id: planId } });
     await (0, cache_1.invalidateDashboardCache)("diet_plan_deleted");
@@ -126,7 +126,7 @@ async function assignDietPlan(requester, planId, memberId) {
         throw new http_error_1.HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
     }
     if (requester.role !== client_1.Role.ADMIN) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "Only admins can assign diet plans");
+        throw new http_error_1.HttpError(403, "DIET_PLAN_ASSIGN_FORBIDDEN", "Only admins can assign diet plans");
     }
     await assertAssignableMember(memberId);
     const updated = await prisma.dietPlan.update({

@@ -79,7 +79,11 @@ npm run preview
 
 ## Environment Variables
 
-`VITE_API_URL` can be used to override API base URL (defaults to `http://localhost:4000`).
+`VITE_API_URL` can be used to override API base URL.
+
+- Local development default: `http://localhost:4000`
+- Same-origin production deployment: leave `VITE_API_URL` unset and serve the frontend behind the same domain/proxy as the API
+- Split frontend/backend deployment: set `VITE_API_URL` to your deployed API origin, for example `https://api.example.com`
 
 ## Out of Scope (Explicit)
 

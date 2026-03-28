@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useContext, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../services/api'
 
 const AuthContext = createContext()
@@ -16,6 +17,7 @@ function getDashboardPath(role) {
 }
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -40,9 +42,14 @@ export function AuthProvider({ children }) {
   const login = async ({ email, password }) => {
     const { user: nextUserRaw } = await api.login({ email, password })
     const nextUser = { ...nextUserRaw, role: normalizeRole(nextUserRaw?.role) }
+    queryClient.clear()
     setUser(nextUser)
     setToken('cookie-session')
-    return getDashboardPath(nextUser.role)
+    return {
+      dashboardPath: getDashboardPath(nextUser.role),
+      user: nextUser,
+      sessionToken: 'cookie-session',
+    }
   }
 
   const register = async ({ name, email, phone, password, role, inviteCode }) => {
@@ -56,6 +63,7 @@ export function AuthProvider({ children }) {
     } catch {
       // noop
     }
+    queryClient.clear()
     setUser(null)
     setToken(null)
   }

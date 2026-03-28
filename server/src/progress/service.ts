@@ -1,13 +1,38 @@
-import { DietCategory, Prisma, Progress, Role, User } from "@prisma/client";
+import { DietCategory, Prisma, Role } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { SafeProgress } from "./types";
 import { calculateBmi, categorizeBmi, getDietTemplate } from "./bmi";
 import { invalidateDashboardCache } from "../dashboard/cache";
+import { createPaginationMeta, SortOrder } from "../utils/list-response";
 
 const prisma = createPrismaClient();
 
-function toSafeProgress(progress: Progress): SafeProgress {
+const progressDetailInclude = {
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      status: true,
+    },
+  },
+  recordedBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+    },
+  },
+} satisfies Prisma.ProgressInclude;
+
+type ProgressWithRelations = Prisma.ProgressGetPayload<{
+  include: typeof progressDetailInclude;
+}>;
+
+function toSafeProgress(progress: ProgressWithRelations): SafeProgress {
   return {
     id: progress.id,
     userId: progress.userId,
@@ -21,9 +46,31 @@ function toSafeProgress(progress: Progress): SafeProgress {
     recordedAt: progress.recordedAt,
     createdAt: progress.createdAt,
     updatedAt: progress.updatedAt,
+    member: {
+      id: progress.user.id,
+      name: progress.user.name,
+      email: progress.user.email,
+      phone: progress.user.phone,
+      status: progress.user.status,
+    },
+    recorder: {
+      id: progress.recordedBy.id,
+      name: progress.recordedBy.name,
+      email: progress.recordedBy.email,
+      role: progress.recordedBy.role,
+    },
   };
 }
 
+function buildProgressWhere(clauses: Prisma.ProgressWhereInput[]): Prisma.ProgressWhereInput {
+  const nonEmptyClauses = clauses.filter((clause) => Object.keys(clause).length > 0);
+
+  if (nonEmptyClauses.length === 0) {
+    return {};
+  }
+
+  return { AND: nonEmptyClauses };
+}
 
 async function assignDietPlanFromBmi(
   requester: { userId: string; role: Role },
@@ -42,15 +89,17 @@ async function assignDietPlanFromBmi(
   });
 }
 
-async function assertMemberUser(userId: string): Promise<User> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+async function assertMemberUser(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true },
+  });
   if (!user) {
     throw new HttpError(404, "USER_NOT_FOUND", "User not found");
   }
   if (user.role !== Role.MEMBER) {
     throw new HttpError(400, "INVALID_PROGRESS_TARGET", "Progress can only be recorded for members");
   }
-  return user;
 }
 
 async function isTrainerAssignedMember(trainerId: string, memberId: string): Promise<boolean> {
@@ -85,7 +134,11 @@ export async function createProgressEntry(
   },
 ): Promise<SafeProgress> {
   if (requester.role !== Role.ADMIN && requester.role !== Role.TRAINER) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to create progress entries");
+    throw new HttpError(
+      403,
+      "PROGRESS_CREATE_FORBIDDEN",
+      "You are not allowed to create progress entries",
+    );
   }
 
   await assertMemberUser(payload.userId);
@@ -93,7 +146,11 @@ export async function createProgressEntry(
   if (requester.role === Role.TRAINER) {
     const assigned = await isTrainerAssignedMember(requester.userId, payload.userId);
     if (!assigned) {
-      throw new HttpError(403, "FORBIDDEN", "You are not allowed to record progress for this member");
+      throw new HttpError(
+        403,
+        "PROGRESS_TRAINER_MEMBER_SCOPE_FORBIDDEN",
+        "You are not allowed to record progress for this member",
+      );
     }
   }
 
@@ -120,6 +177,7 @@ export async function createProgressEntry(
       notes: payload.notes ?? null,
       recordedAt: payload.recordedAt,
     },
+    include: progressDetailInclude,
   });
 
   if (category) {
@@ -130,33 +188,181 @@ export async function createProgressEntry(
   return toSafeProgress(created);
 }
 
-export async function listAllProgress(): Promise<SafeProgress[]> {
-  const rows = await prisma.progress.findMany({ orderBy: { recordedAt: "desc" } });
-  return rows.map(toSafeProgress);
+export async function listAllProgress(query: {
+  page: number;
+  pageSize: number;
+  search: string;
+  dietCategory?: DietCategory | undefined;
+  sortBy: "recordedAt" | "createdAt";
+  sortOrder: SortOrder;
+}): Promise<{
+  progress: SafeProgress[];
+  pagination: ReturnType<typeof createPaginationMeta>;
+  filters: {
+    search: string;
+    dietCategory: DietCategory | null;
+  };
+  sort: {
+    sortBy: "recordedAt" | "createdAt";
+    sortOrder: SortOrder;
+  };
+}> {
+  const search = query.search.trim();
+  const where = buildProgressWhere([
+    query.dietCategory ? { dietCategory: query.dietCategory } : {},
+    search.length > 0
+      ? {
+          OR: [
+            { notes: { contains: search, mode: "insensitive" } },
+            {
+              user: {
+                is: {
+                  OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } },
+                    { phone: { contains: search, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
+            {
+              recordedBy: {
+                is: {
+                  OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
+          ],
+        }
+      : {},
+  ]);
+  const skip = (query.page - 1) * query.pageSize;
+  const orderBy: Prisma.ProgressOrderByWithRelationInput[] =
+    query.sortBy === "createdAt"
+      ? [{ createdAt: query.sortOrder }, { recordedAt: "desc" }]
+      : [{ recordedAt: query.sortOrder }, { createdAt: "desc" }];
+  const [rows, total] = await prisma.$transaction([
+    prisma.progress.findMany({
+      where,
+      orderBy,
+      skip,
+      take: query.pageSize,
+      include: progressDetailInclude,
+    }),
+    prisma.progress.count({ where }),
+  ]);
+
+  return {
+    progress: rows.map(toSafeProgress),
+    pagination: createPaginationMeta(query.page, query.pageSize, total),
+    filters: {
+      search,
+      dietCategory: query.dietCategory ?? null,
+    },
+    sort: {
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    },
+  };
 }
 
 export async function getProgressByUserId(
   requester: { userId: string; role: Role },
   memberUserId: string,
-): Promise<SafeProgress[]> {
+  query: {
+    page: number;
+    pageSize: number;
+    search: string;
+    dietCategory?: DietCategory | undefined;
+    sortBy: "recordedAt" | "createdAt";
+    sortOrder: SortOrder;
+  },
+): Promise<{
+  progress: SafeProgress[];
+  pagination: ReturnType<typeof createPaginationMeta>;
+  filters: {
+    search: string;
+    dietCategory: DietCategory | null;
+  };
+  sort: {
+    sortBy: "recordedAt" | "createdAt";
+    sortOrder: SortOrder;
+  };
+}> {
   await assertMemberUser(memberUserId);
 
   if (requester.role === Role.MEMBER && requester.userId !== memberUserId) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to access this member progress");
+    throw new HttpError(
+      403,
+      "PROGRESS_MEMBER_SCOPE_FORBIDDEN",
+      "You are not allowed to access this member progress",
+    );
   }
 
   if (requester.role === Role.TRAINER) {
     const assigned = await isTrainerAssignedMember(requester.userId, memberUserId);
     if (!assigned) {
-      throw new HttpError(403, "FORBIDDEN", "You are not allowed to access this member progress");
+      throw new HttpError(
+        403,
+        "PROGRESS_TRAINER_MEMBER_SCOPE_FORBIDDEN",
+        "You are not allowed to access this member progress",
+      );
     }
   }
 
-  const rows = await prisma.progress.findMany({
-    where: { userId: memberUserId },
-    orderBy: { recordedAt: "desc" },
-  });
-  return rows.map(toSafeProgress);
+  const search = query.search.trim();
+  const where = buildProgressWhere([
+    { userId: memberUserId },
+    query.dietCategory ? { dietCategory: query.dietCategory } : {},
+    search.length > 0
+      ? {
+          OR: [
+            { notes: { contains: search, mode: "insensitive" } },
+            {
+              recordedBy: {
+                is: {
+                  OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
+          ],
+        }
+      : {},
+  ]);
+  const skip = (query.page - 1) * query.pageSize;
+  const orderBy: Prisma.ProgressOrderByWithRelationInput[] =
+    query.sortBy === "createdAt"
+      ? [{ createdAt: query.sortOrder }, { recordedAt: "desc" }]
+      : [{ recordedAt: query.sortOrder }, { createdAt: "desc" }];
+  const [rows, total] = await prisma.$transaction([
+    prisma.progress.findMany({
+      where,
+      orderBy,
+      skip,
+      take: query.pageSize,
+      include: progressDetailInclude,
+    }),
+    prisma.progress.count({ where }),
+  ]);
+
+  return {
+    progress: rows.map(toSafeProgress),
+    pagination: createPaginationMeta(query.page, query.pageSize, total),
+    filters: {
+      search,
+      dietCategory: query.dietCategory ?? null,
+    },
+    sort: {
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    },
+  };
 }
 
 export async function deleteProgressEntry(progressId: string): Promise<void> {

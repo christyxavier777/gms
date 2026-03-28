@@ -4,8 +4,20 @@ import { ZodError } from "zod";
 import { HttpError } from "../middleware/http-error";
 import { requireAuth } from "../middleware/require-auth";
 import { requireRole } from "../middleware/require-role";
-import { deleteUser, getUserById, listUsers, canReadUser, updateUserStatus } from "../users/service";
-import { listUsersQuerySchema, patchUserStatusSchema, userIdParamSchema } from "../users/schemas";
+import {
+  deleteUser,
+  getUserById,
+  listAccessibleMembers,
+  listUsers,
+  canReadUser,
+  updateUserStatus,
+} from "../users/service";
+import {
+  accessibleMembersQuerySchema,
+  listUsersQuerySchema,
+  patchUserStatusSchema,
+  userIdParamSchema,
+} from "../users/schemas";
 
 // User lifecycle management routes with strict role controls.
 export const usersRouter = Router();
@@ -13,8 +25,25 @@ export const usersRouter = Router();
 usersRouter.get("/users", requireAuth, requireRole(Role.ADMIN), async (req, res) => {
   try {
     const query = listUsersQuerySchema.parse(req.query);
-    const result = await listUsers(query.page, query.pageSize);
+    const result = await listUsers(query);
     res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new HttpError(400, "VALIDATION_ERROR", "Query parameters are invalid", error.flatten());
+    }
+    throw error;
+  }
+});
+
+usersRouter.get("/users/members/available", requireAuth, requireRole(Role.ADMIN, Role.TRAINER), async (req, res) => {
+  try {
+    if (!req.auth) {
+      throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+    }
+
+    const query = accessibleMembersQuerySchema.parse(req.query);
+    const members = await listAccessibleMembers(req.auth, query);
+    res.status(200).json({ members });
   } catch (error) {
     if (error instanceof ZodError) {
       throw new HttpError(400, "VALIDATION_ERROR", "Query parameters are invalid", error.flatten());

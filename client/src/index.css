@@ -36,3 +36,8 @@ body {
   color: #ffffff;
   font-family: "Poppins", Arial, sans-serif;
 }
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #ff8b5f;
+  outline-offset: 3px;
+}

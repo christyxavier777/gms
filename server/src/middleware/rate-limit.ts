@@ -2,12 +2,47 @@ import { Request } from "express";
 import { env } from "../config/env";
 import { createDistributedRateLimiter } from "./distributed-rate-limit";
 
+function normalizeRateLimitKeyPart(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9:._-]/g, "_").slice(0, 160) || "unknown";
+}
+
+function buildLoginIdentity(req: Request): string {
+  const ipAddress = req.ip || req.socket.remoteAddress || "unknown";
+  const email = typeof req.body?.email === "string" ? req.body.email : "";
+
+  return `${normalizeRateLimitKeyPart(ipAddress)}:${normalizeRateLimitKeyPart(email || "anonymous")}`;
+}
+
 // Rate limit for authentication endpoints to reduce brute-force attempts.
 export const authRateLimiter = createDistributedRateLimiter({
   namespace: "auth",
   windowMs: env.authRateLimitWindowMs,
   max: env.authRateLimitMax,
   message: "Too many authentication requests. Please try again later.",
+  code: "AUTH_THROTTLED",
+  skip: (req: Request) => req.path === "/login",
+  buildDetails: ({ limit, retryAfterSec, windowSec }) => ({
+    throttleScope: "auth",
+    retryAfterSeconds: retryAfterSec,
+    limit,
+    windowSeconds: windowSec,
+  }),
+});
+
+// Dedicated login limiter with retry metadata for lockout-like feedback.
+export const loginRateLimiter = createDistributedRateLimiter({
+  namespace: "login",
+  windowMs: env.authRateLimitWindowMs,
+  max: env.authRateLimitMax,
+  message: "Too many login attempts. Please wait before trying again.",
+  code: "AUTH_LOGIN_THROTTLED",
+  key: buildLoginIdentity,
+  buildDetails: ({ limit, retryAfterSec, windowSec }) => ({
+    throttleScope: "login",
+    retryAfterSeconds: retryAfterSec,
+    limit,
+    windowSeconds: windowSec,
+  }),
 });
 
 // Rate limit mutating requests while allowing read traffic.

@@ -1,31 +1,25 @@
-import { useEffect, useState } from 'react'
+import DashboardLoadingState from '../components/DashboardLoadingState'
 import DashboardLayout from '../components/DashboardLayout'
+import StatusBanner from '../components/StatusBanner'
 import { useAuth } from '../context/AuthContext'
-import { api } from '../services/api'
+import { getServerStateErrorMessage } from '../server-state/errors'
+import { useAdminDashboardQuery } from '../server-state/queries'
 
 export default function AdminDashboard() {
   const { token } = useAuth()
-  const [dashboard, setDashboard] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const dashboardQuery = useAdminDashboardQuery(token)
+  const dashboard = dashboardQuery.data?.dashboard ?? null
+  const error = dashboardQuery.error
+    ? getServerStateErrorMessage(dashboardQuery.error, 'Failed to load admin dashboard.')
+    : ''
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      if (!token) return
-      try {
-        setLoading(true)
-        setError('')
-        const data = await api.getAdminDashboard(token)
-        setDashboard(data.dashboard)
-      } catch (err) {
-        setError(err?.message || 'Failed to load admin dashboard.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDashboard()
-  }, [token])
+  if (dashboardQuery.isPending) {
+    return (
+      <DashboardLayout title="Admin">
+        <DashboardLoadingState label="Loading admin dashboard" summaryCount={6} />
+      </DashboardLayout>
+    )
+  }
 
   const hasLiveStats =
     dashboard &&
@@ -38,46 +32,36 @@ export default function AdminDashboard() {
       dashboard.totalPlans,
     ].some((value) => Number(value) > 0)
 
-  const source = hasLiveStats
-    ? dashboard
-    : {
-        totalUsers: 486,
-        activeMembers: 412,
-        activeSubscriptions: 398,
-        expiredSubscriptions: 26,
-        totalTrainers: 16,
-        totalPlans: 89,
-      }
-
   const kpis = [
-    { label: 'Total Users', value: source.totalUsers, hint: 'All roles' },
-    { label: 'Active Members', value: source.activeMembers, hint: 'Currently training' },
-    { label: 'Active Subscriptions', value: source.activeSubscriptions, hint: 'Revenue-active' },
-    { label: 'Expired Subscriptions', value: source.expiredSubscriptions, hint: 'Renewal pipeline' },
-    { label: 'Total Trainers', value: source.totalTrainers, hint: 'Coaching staff' },
-    { label: 'Total Plans', value: source.totalPlans, hint: 'Workout + diet' },
+    { label: 'Total Users', value: Number(dashboard?.totalUsers ?? 0), hint: 'All roles' },
+    { label: 'Active Members', value: Number(dashboard?.activeMembers ?? 0), hint: 'Currently training' },
+    { label: 'Active Subscriptions', value: Number(dashboard?.activeSubscriptions ?? 0), hint: 'Revenue-active' },
+    { label: 'Expired Subscriptions', value: Number(dashboard?.expiredSubscriptions ?? 0), hint: 'Renewal pipeline' },
+    { label: 'Total Trainers', value: Number(dashboard?.totalTrainers ?? 0), hint: 'Coaching staff' },
+    { label: 'Total Plans', value: Number(dashboard?.totalPlans ?? 0), hint: 'Workout + diet' },
   ]
 
-  const alerts = [
-    '12 memberships are expiring within 5 days',
-    'Evening slot utilization reached 91%',
-    '7 members require trainer reassignment',
-  ]
+  const alerts = hasLiveStats
+    ? [
+        `${Number(dashboard?.expiredSubscriptions ?? 0)} subscriptions need renewal review`,
+        `${Number(dashboard?.totalPlans ?? 0)} total plans are currently available`,
+        `${Number(dashboard?.totalTrainers ?? 0)} trainers are active in the system`,
+      ]
+    : ['No live admin metrics yet. Create users, plans, and subscriptions to populate this dashboard.']
 
   const quickActions = [
-    'Create renewal campaign for monthly members',
-    'Audit inactive members and call follow-up list',
-    'Review trainer workload and re-balance slots',
-    'Publish updated beginner transformation plan',
+    'Review onboarding and create your first trainer/member accounts',
+    'Create baseline workout and diet plans for assignments',
+    'Seed or import subscription data before going live',
+    'Confirm deploy environment variables and health checks',
   ]
 
   return (
     <DashboardLayout title="Admin">
-      {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading dashboard...</p>}
-      {error && <p className="text-sm font-semibold text-[#E21A2C]">{error}</p>}
-      {!hasLiveStats && !loading && (
+      {error && <StatusBanner message={error} />}
+      {!hasLiveStats && !dashboardQuery.isPending && (
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
-          Presentation mode: showing representative sample metrics.
+          Live mode: this dashboard will populate as real data is created.
         </p>
       )}
 

@@ -11,4 +11,17 @@ export type SafeProgress = {
   recordedAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  member: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    status: "ACTIVE" | "INACTIVE";
+  };
+  recorder: {
+    id: string;
+    name: string;
+    email: string;
+    role: "ADMIN" | "TRAINER" | "MEMBER";
+  };
 };

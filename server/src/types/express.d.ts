@@ -5,6 +5,17 @@ declare global {
     interface Request {
       requestId?: string;
       rawBody?: Buffer;
+      rateLimits?: Record<
+        string,
+        {
+          count: number;
+          limit: number;
+          remaining: number;
+          retryAfterSec: number;
+          windowSec: number;
+          resetAtUnix: number;
+        }
+      >;
       wearableWebhook?: {
         provider: "FITBIT" | "APPLE_WATCH" | "GENERIC";
         eventId: string;

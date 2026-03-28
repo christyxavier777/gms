@@ -3,10 +3,26 @@ import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { SafeUser } from "../auth/types";
 import { invalidateDashboardCache } from "../dashboard/cache";
+import { createPaginationMeta, SortOrder } from "../utils/list-response";
 
 const prisma = createPrismaClient();
 
-function toSafeUser(user: User): SafeUser {
+const safeUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  role: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
+
+type SafeUserRecord = Prisma.UserGetPayload<{
+  select: typeof safeUserSelect;
+}>;
+
+function toSafeUser(user: SafeUserRecord): SafeUser {
   return {
     id: user.id,
     name: user.name,
@@ -19,33 +35,125 @@ function toSafeUser(user: User): SafeUser {
   };
 }
 
-export async function listUsers(page: number, pageSize: number): Promise<{
+export async function listUsers(options: {
+  page: number;
+  pageSize: number;
+  search: string;
+  role?: Role | undefined;
+  status?: UserStatus | undefined;
+  sortBy: "createdAt" | "name" | "email";
+  sortOrder: SortOrder;
+}): Promise<{
   users: SafeUser[];
-  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  pagination: ReturnType<typeof createPaginationMeta>;
+  filters: {
+    search: string;
+    role: Role | null;
+    status: UserStatus | null;
+  };
+  sort: {
+    sortBy: "createdAt" | "name" | "email";
+    sortOrder: SortOrder;
+  };
 }> {
-  const skip = (page - 1) * pageSize;
+  const skip = (options.page - 1) * options.pageSize;
+  const search = options.search.trim();
+  const where: Prisma.UserWhereInput = {
+    ...(options.role ? { role: options.role } : {}),
+    ...(options.status ? { status: options.status } : {}),
+    ...(search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { phone: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+  const orderBy: Prisma.UserOrderByWithRelationInput[] =
+    options.sortBy === "name"
+      ? [{ name: options.sortOrder }, { createdAt: "desc" }]
+      : options.sortBy === "email"
+        ? [{ email: options.sortOrder }, { createdAt: "desc" }]
+        : [{ createdAt: options.sortOrder }];
   const [rows, total] = await prisma.$transaction([
     prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
+      where,
+      orderBy,
       skip,
-      take: pageSize,
+      take: options.pageSize,
+      select: safeUserSelect,
     }),
-    prisma.user.count(),
+    prisma.user.count({ where }),
   ]);
 
   return {
     users: rows.map(toSafeUser),
-    pagination: {
-      page,
-      pageSize,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    pagination: createPaginationMeta(options.page, options.pageSize, total),
+    filters: {
+      search,
+      role: options.role ?? null,
+      status: options.status ?? null,
+    },
+    sort: {
+      sortBy: options.sortBy,
+      sortOrder: options.sortOrder,
     },
   };
 }
 
+export async function listAccessibleMembers(
+  requester: { userId: string; role: Role },
+  options: { search: string; limit: number },
+): Promise<SafeUser[]> {
+  if (requester.role !== Role.ADMIN && requester.role !== Role.TRAINER) {
+    throw new HttpError(403, "FORBIDDEN", "You are not allowed to access member directory data");
+  }
+
+  const search = options.search.trim();
+  const searchFilter: Prisma.UserWhereInput =
+    search.length > 0
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { phone: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
+  const scopeFilter: Prisma.UserWhereInput =
+    requester.role === Role.TRAINER
+      ? {
+          memberAssignments: {
+            some: {
+              trainerId: requester.userId,
+              active: true,
+            },
+          },
+        }
+      : {};
+
+  const rows = await prisma.user.findMany({
+    where: {
+      role: Role.MEMBER,
+      ...scopeFilter,
+      ...searchFilter,
+    },
+    orderBy: [{ name: "asc" }, { createdAt: "desc" }],
+    take: options.limit,
+    select: safeUserSelect,
+  });
+
+  return rows.map(toSafeUser);
+}
+
 export async function getUserById(id: string): Promise<SafeUser> {
-  const user = await prisma.user.findUnique({ where: { id } });
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: safeUserSelect,
+  });
   if (!user) {
     throw new HttpError(404, "USER_NOT_FOUND", "User not found");
   }
@@ -57,6 +165,7 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
     const user = await prisma.user.update({
       where: { id },
       data: { status },
+      select: safeUserSelect,
     });
     await invalidateDashboardCache("user_status_updated");
     return toSafeUser(user);

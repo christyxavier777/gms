@@ -1,27 +1,49 @@
-import { Role, SubscriptionStatus } from "@prisma/client";
+import { Role, SubscriptionStatus, UserStatus } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
+import { fromMinorUnits } from "../payments/money";
+import {
+  getActiveSubscriptionWhere,
+  getExpiredSubscriptionWhere,
+  getEffectiveSubscriptionStatus,
+} from "../subscriptions/lifecycle";
 
 const prisma = createPrismaClient();
 
+function readAggregateCount(count: true | { _all?: number | null } | undefined): number {
+  return count && count !== true ? count._all ?? 0 : 0;
+}
+
 // Aggregated admin dashboard counts from core system entities.
 export async function getAdminDashboard() {
-  const [
-    totalUsers,
-    activeMembers,
-    activeSubscriptions,
-    expiredSubscriptions,
-    totalTrainers,
-    workoutPlanCount,
-    dietPlanCount,
-  ] = await prisma.$transaction([
-    prisma.user.count(),
-    prisma.user.count({ where: { role: Role.MEMBER, status: "ACTIVE" } }),
-    prisma.subscription.count({ where: { status: SubscriptionStatus.ACTIVE } }),
-    prisma.subscription.count({ where: { status: SubscriptionStatus.EXPIRED } }),
-    prisma.user.count({ where: { role: Role.TRAINER } }),
+  const now = new Date();
+  const [userGroups, activeSubscriptions, expiredSubscriptions, workoutPlanCount, dietPlanCount] = await prisma.$transaction([
+    prisma.user.groupBy({
+      by: ["role", "status"],
+      orderBy: [{ role: "asc" }, { status: "asc" }],
+      _count: { _all: true },
+    }),
+    prisma.subscription.count({ where: getActiveSubscriptionWhere(now) }),
+    prisma.subscription.count({ where: getExpiredSubscriptionWhere(now) }),
     prisma.workoutPlan.count(),
     prisma.dietPlan.count(),
   ]);
+
+  let totalUsers = 0;
+  let activeMembers = 0;
+  let totalTrainers = 0;
+
+  for (const row of userGroups) {
+    const count = readAggregateCount(row._count);
+    totalUsers += count;
+
+    if (row.role === Role.MEMBER && row.status === UserStatus.ACTIVE) {
+      activeMembers = count;
+    }
+
+    if (row.role === Role.TRAINER) {
+      totalTrainers += count;
+    }
+  }
 
   return {
     totalUsers,
@@ -84,16 +106,33 @@ export async function getTrainerDashboard(trainerId: string, recentLimit: number
 
 // Member dashboard summary for active subscription, assigned plans, and recent progress.
 export async function getMemberDashboard(memberId: string, recentLimit: number) {
+  const now = new Date();
   const [activeSubscription, workoutPlans, dietPlans, recentProgressEntries] = await prisma.$transaction([
     prisma.subscription.findFirst({
-      where: { userId: memberId, status: SubscriptionStatus.ACTIVE },
-      orderBy: { endDate: "desc" },
+      where: {
+        userId: memberId,
+        OR: [
+          getActiveSubscriptionWhere(now),
+          { status: SubscriptionStatus.PENDING_ACTIVATION },
+        ],
+      },
+      orderBy: [{ createdAt: "desc" }],
       select: {
         id: true,
-        planName: true,
+        planId: true,
         startDate: true,
         endDate: true,
         status: true,
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            priceMinor: true,
+            durationDays: true,
+            perks: true,
+            active: true,
+          },
+        },
       },
     }),
     prisma.workoutPlan.findMany({
@@ -138,7 +177,25 @@ export async function getMemberDashboard(memberId: string, recentLimit: number) 
   ]);
 
   return {
-    activeSubscriptionSummary: activeSubscription,
+    activeSubscriptionSummary: activeSubscription
+      ? {
+          id: activeSubscription.id,
+          planId: activeSubscription.planId,
+          planName: activeSubscription.plan.name,
+          startDate: activeSubscription.startDate,
+          endDate: activeSubscription.endDate,
+          status: getEffectiveSubscriptionStatus(activeSubscription.status, activeSubscription.endDate),
+          plan: {
+            id: activeSubscription.plan.id,
+            name: activeSubscription.plan.name,
+            priceMinor: activeSubscription.plan.priceMinor,
+            priceInr: fromMinorUnits(activeSubscription.plan.priceMinor),
+            durationDays: activeSubscription.plan.durationDays,
+            perks: activeSubscription.plan.perks,
+            active: activeSubscription.plan.active,
+          },
+        }
+      : null,
     assignedWorkoutPlans: workoutPlans,
     assignedDietPlans: dietPlans,
     recentProgressEntries,

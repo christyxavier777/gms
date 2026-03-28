@@ -9,6 +9,7 @@ import { getAdminDashboard, getMemberDashboard, getTrainerDashboard } from "../d
 import { buildDashboardCacheKey, getDashboardCache, setDashboardCache } from "../dashboard/cache";
 import { getPerformanceSnapshot, getSloSnapshot } from "../observability/perf-metrics";
 import { getCacheSnapshot } from "../observability/cache-metrics";
+import { getBusinessFlowSnapshot } from "../observability/business-flow-metrics";
 import { getWearableWebhookAuditSnapshot } from "../observability/wearable-webhook-metrics";
 import { cleanupWearableWebhookAuditEvents } from "../observability/wearable-webhook-retention";
 import { env } from "../config/env";
@@ -32,7 +33,8 @@ dashboardRouter.get("/dashboard/admin/performance", requireAuth, requireRole(Rol
   const metrics = getPerformanceSnapshot(limit);
   const slo = getSloSnapshot();
   const cache = getCacheSnapshot();
-  res.status(200).json({ metrics, slo, cache });
+  const flows = getBusinessFlowSnapshot(Math.min(25, limit));
+  res.status(200).json({ metrics, slo, cache, flows });
 });
 
 dashboardRouter.get("/dashboard/admin/integrations/wearables/audit", requireAuth, requireRole(Role.ADMIN), async (req, res) => {

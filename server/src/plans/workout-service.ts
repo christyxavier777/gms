@@ -47,7 +47,11 @@ export async function createWorkoutPlan(
   payload: { title: string; description: string },
 ): Promise<SafePlan> {
   if (requester.role !== Role.ADMIN && requester.role !== Role.TRAINER) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to create workout plans");
+    throw new HttpError(
+      403,
+      "WORKOUT_PLAN_CREATE_FORBIDDEN",
+      "You are not allowed to create workout plans",
+    );
   }
 
   const plan = await prisma.workoutPlan.create({
@@ -88,7 +92,11 @@ export async function getWorkoutPlanById(
     throw new HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
   }
   if (!canReadWorkoutPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to access this workout plan");
+    throw new HttpError(
+      403,
+      "WORKOUT_PLAN_READ_FORBIDDEN",
+      "You are not allowed to access this workout plan",
+    );
   }
   return toSafeWorkoutPlan(plan);
 }
@@ -104,7 +112,11 @@ export async function updateWorkoutPlan(
     throw new HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
   }
   if (!canManageWorkoutPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to modify this workout plan");
+    throw new HttpError(
+      403,
+      "WORKOUT_PLAN_UPDATE_FORBIDDEN",
+      "You are not allowed to modify this workout plan",
+    );
   }
 
   const updated = await prisma.workoutPlan.update({
@@ -129,7 +141,11 @@ export async function deleteWorkoutPlan(
     throw new HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
   }
   if (!canManageWorkoutPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to delete this workout plan");
+    throw new HttpError(
+      403,
+      "WORKOUT_PLAN_DELETE_FORBIDDEN",
+      "You are not allowed to delete this workout plan",
+    );
   }
   await prisma.workoutPlan.delete({ where: { id: planId } });
   await invalidateDashboardCache("workout_plan_deleted");
@@ -146,7 +162,7 @@ export async function assignWorkoutPlan(
     throw new HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
   }
   if (requester.role !== Role.ADMIN) {
-    throw new HttpError(403, "FORBIDDEN", "Only admins can assign workout plans");
+    throw new HttpError(403, "WORKOUT_PLAN_ASSIGN_FORBIDDEN", "Only admins can assign workout plans");
   }
 
   await assertAssignableMember(memberId);

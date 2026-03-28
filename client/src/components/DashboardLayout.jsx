@@ -1,25 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Dumbbell, CreditCard, Activity } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-
-function roleDashboardPath(role) {
-  if (role === 'ADMIN') return '/admin'
-  if (role === 'TRAINER') return '/trainer'
-  return '/member'
-}
-
-const navItems = [
-  { to: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/plans', label: 'Plans', icon: Dumbbell },
-  { to: '/subscriptions', label: 'Memberships', icon: CreditCard },
-  { to: '/progress', label: 'Progress', icon: Activity },
-]
+import { getWorkspaceNavItems, roleWorkspaceLabel } from '../navigation/workspaceNavigation'
 
 export default function DashboardLayout({ children, title = 'Dashboard' }) {
   const { user } = useAuth()
   const location = useLocation()
-  const dashboardPath = roleDashboardPath(user?.role)
-  const roleLabel = user?.role ? `${user.role} Workspace` : 'Workspace'
+  const roleLabel = roleWorkspaceLabel(user?.role)
+  const visibleNavItems = getWorkspaceNavItems(user?.role)
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,rgba(226,26,44,0.16),transparent_32%),radial-gradient(circle_at_85%_95%,rgba(255,132,72,0.15),transparent_30%),linear-gradient(140deg,#070a0f_0%,#0f1620_54%,#0b1017_100%)] text-white">
@@ -31,14 +18,13 @@ export default function DashboardLayout({ children, title = 'Dashboard' }) {
             <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400">{roleLabel}</p>
           </div>
           <nav className="space-y-2.5">
-            {navItems.map((item) => {
-              const to = item.to === 'dashboard' ? dashboardPath : item.to
-              const active = location.pathname === to
+            {visibleNavItems.map((item) => {
+              const active = location.pathname === item.to
               const Icon = item.icon
               return (
                 <Link
                   key={item.label}
-                  to={to}
+                  to={item.to}
                   className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
                     active
                       ? 'bg-gradient-to-r from-[#E21A2C]/30 to-[#ff7a45]/20 text-white ring-1 ring-[#ff8b5f]/70'
@@ -66,14 +52,13 @@ export default function DashboardLayout({ children, title = 'Dashboard' }) {
           </header>
 
           <nav className="mb-5 flex gap-2 overflow-x-auto pb-1 md:hidden">
-            {navItems.map((item) => {
-              const to = item.to === 'dashboard' ? dashboardPath : item.to
-              const active = location.pathname === to
+            {visibleNavItems.map((item) => {
+              const active = location.pathname === item.to
               const Icon = item.icon
               return (
                 <Link
                   key={`mobile-${item.label}`}
-                  to={to}
+                  to={item.to}
                   className={`flex items-center gap-2 whitespace-nowrap border px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] ${
                     active
                       ? 'border-[#ff8b5f] bg-[#E21A2C]/25 text-white'

@@ -8,6 +8,8 @@ exports.extractSessionToken = extractSessionToken;
 exports.createSession = createSession;
 exports.validateSession = validateSession;
 exports.revokeSession = revokeSession;
+exports.listUserSessions = listUserSessions;
+exports.revokeUserSessions = revokeUserSessions;
 const crypto_1 = __importDefault(require("crypto"));
 const client_1 = require("../prisma/client");
 const http_error_1 = require("../middleware/http-error");
@@ -16,6 +18,17 @@ const prisma = (0, client_1.createPrismaClient)();
 const SESSION_COOKIE = "gms_session";
 const SESSION_TTL_DAYS = 7;
 const SESSION_REVOKE_PREFIX = "session:revoked:";
+const sessionValidationSelect = {
+    userId: true,
+    revokedAt: true,
+    expiresAt: true,
+    user: {
+        select: {
+            role: true,
+            status: true,
+        },
+    },
+};
 function hashToken(token) {
     return crypto_1.default.createHash("sha256").update(token).digest("hex");
 }
@@ -44,6 +57,9 @@ function extractSessionToken(cookieHeader) {
     const cookies = parseCookieHeader(cookieHeader);
     return cookies[SESSION_COOKIE] ?? null;
 }
+function getTokenHash(token) {
+    return token ? hashToken(token) : null;
+}
 async function createSession(params) {
     const token = crypto_1.default.randomBytes(48).toString("hex");
     const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
@@ -66,7 +82,7 @@ async function validateSession(sessionToken) {
     }
     const session = await prisma.session.findUnique({
         where: { tokenHash },
-        include: { user: true },
+        select: sessionValidationSelect,
     });
     if (!session || session.revokedAt || session.expiresAt <= new Date()) {
         if (session?.revokedAt) {
@@ -94,5 +110,62 @@ async function revokeSession(sessionToken) {
         const ttlSec = Math.max(60, Math.floor((existing.expiresAt.getTime() - Date.now()) / 1000));
         await (0, client_2.cacheSet)(revokedCacheKey(tokenHash), "1", ttlSec);
     }
+}
+async function listUserSessions(params) {
+    const currentTokenHash = getTokenHash(params.currentSessionToken);
+    const now = new Date();
+    const sessions = await prisma.session.findMany({
+        where: {
+            userId: params.userId,
+            revokedAt: null,
+            expiresAt: { gt: now },
+        },
+        orderBy: [{ createdAt: "desc" }],
+        select: {
+            id: true,
+            tokenHash: true,
+            userAgent: true,
+            ipAddress: true,
+            createdAt: true,
+            expiresAt: true,
+        },
+    });
+    return sessions.map((session) => ({
+        id: session.id,
+        userAgent: session.userAgent,
+        ipAddress: session.ipAddress,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        isCurrent: currentTokenHash === session.tokenHash,
+    }));
+}
+async function revokeUserSessions(params) {
+    const excludeTokenHash = getTokenHash(params.excludeSessionToken);
+    const now = new Date();
+    const where = {
+        userId: params.userId,
+        revokedAt: null,
+        expiresAt: { gt: now },
+        ...(excludeTokenHash ? { NOT: { tokenHash: excludeTokenHash } } : {}),
+    };
+    const sessionsToRevoke = await prisma.session.findMany({
+        where,
+        select: {
+            tokenHash: true,
+            expiresAt: true,
+        },
+    });
+    if (sessionsToRevoke.length === 0) {
+        return { revokedCount: 0 };
+    }
+    await prisma.session.updateMany({
+        where,
+        data: { revokedAt: now },
+    });
+    await Promise.all(sessionsToRevoke.map((session) => {
+        const ttlSec = Math.max(60, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
+        return (0, client_2.cacheSet)(revokedCacheKey(session.tokenHash), "1", ttlSec);
+    }));
+    return { revokedCount: sessionsToRevoke.length };
 }
 //# sourceMappingURL=session.js.map

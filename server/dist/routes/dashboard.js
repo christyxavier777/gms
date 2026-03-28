@@ -12,6 +12,7 @@ const service_1 = require("../dashboard/service");
 const cache_1 = require("../dashboard/cache");
 const perf_metrics_1 = require("../observability/perf-metrics");
 const cache_metrics_1 = require("../observability/cache-metrics");
+const business_flow_metrics_1 = require("../observability/business-flow-metrics");
 const wearable_webhook_metrics_1 = require("../observability/wearable-webhook-metrics");
 const wearable_webhook_retention_1 = require("../observability/wearable-webhook-retention");
 const env_1 = require("../config/env");
@@ -32,7 +33,8 @@ exports.dashboardRouter.get("/dashboard/admin/performance", require_auth_1.requi
     const metrics = (0, perf_metrics_1.getPerformanceSnapshot)(limit);
     const slo = (0, perf_metrics_1.getSloSnapshot)();
     const cache = (0, cache_metrics_1.getCacheSnapshot)();
-    res.status(200).json({ metrics, slo, cache });
+    const flows = (0, business_flow_metrics_1.getBusinessFlowSnapshot)(Math.min(25, limit));
+    res.status(200).json({ metrics, slo, cache, flows });
 });
 exports.dashboardRouter.get("/dashboard/admin/integrations/wearables/audit", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
     const requestedWindow = Number(req.query.windowMinutes ?? 60);

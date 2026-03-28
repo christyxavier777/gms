@@ -7,28 +7,32 @@ const client_2 = require("../prisma/client");
 const prisma = (0, client_2.createPrismaClient)();
 async function seedAdmin() {
     console.log("[seed-admin] start");
-    const email = env_1.env.adminSeed.email.toLowerCase();
+    if (!env_1.env.adminSeed) {
+        throw new Error("ADMIN_NAME, ADMIN_EMAIL, and ADMIN_PASSWORD are required to run seed:admin.");
+    }
+    const adminSeed = env_1.env.adminSeed;
+    const email = adminSeed.email.toLowerCase();
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-        const passwordHash = await (0, password_1.hashPassword)(env_1.env.adminSeed.password);
+        const passwordHash = await (0, password_1.hashPassword)(adminSeed.password);
         await prisma.user.update({
             where: { id: existing.id },
             data: {
-                name: env_1.env.adminSeed.name,
+                name: adminSeed.name,
                 role: client_1.Role.ADMIN,
-                phone: env_1.env.adminSeed.phone,
+                phone: adminSeed.phone,
                 passwordHash,
             },
         });
         console.log(`[seed-admin] updated admin user: ${email}`);
     }
     else {
-        const passwordHash = await (0, password_1.hashPassword)(env_1.env.adminSeed.password);
+        const passwordHash = await (0, password_1.hashPassword)(adminSeed.password);
         await prisma.user.create({
             data: {
-                name: env_1.env.adminSeed.name,
+                name: adminSeed.name,
                 email,
-                phone: env_1.env.adminSeed.phone,
+                phone: adminSeed.phone,
                 passwordHash,
                 role: client_1.Role.ADMIN,
             },

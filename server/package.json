@@ -5,9 +5,11 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "jobs:worker": "tsx src/jobs/worker.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/index.js",
+    "start:worker": "node dist/jobs/worker.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev --name dev_change",
     "prisma:migrate:deploy": "prisma migrate deploy",

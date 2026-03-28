@@ -14,8 +14,24 @@ exports.usersRouter = (0, express_1.Router)();
 exports.usersRouter.get("/users", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
     try {
         const query = schemas_1.listUsersQuerySchema.parse(req.query);
-        const result = await (0, service_1.listUsers)(query.page, query.pageSize);
+        const result = await (0, service_1.listUsers)(query);
         res.status(200).json(result);
+    }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new http_error_1.HttpError(400, "VALIDATION_ERROR", "Query parameters are invalid", error.flatten());
+        }
+        throw error;
+    }
+});
+exports.usersRouter.get("/users/members/available", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN, client_1.Role.TRAINER), async (req, res) => {
+    try {
+        if (!req.auth) {
+            throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+        }
+        const query = schemas_1.accessibleMembersQuerySchema.parse(req.query);
+        const members = await (0, service_1.listAccessibleMembers)(req.auth, query);
+        res.status(200).json({ members });
     }
     catch (error) {
         if (error instanceof zod_1.ZodError) {

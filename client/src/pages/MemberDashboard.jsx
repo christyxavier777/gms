@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import DashboardLoadingState from '../components/DashboardLoadingState'
 import DashboardLayout from '../components/DashboardLayout'
+import StatusBanner from '../components/StatusBanner'
 import { useAuth } from '../context/AuthContext'
-import { api } from '../services/api'
+import { getServerStateErrorMessage } from '../server-state/errors'
+import { useMemberDashboardQuery } from '../server-state/queries'
 
 function formatDate(date) {
   try {
@@ -13,73 +15,52 @@ function formatDate(date) {
 
 export default function MemberDashboard() {
   const { user, token } = useAuth()
-  const [dashboard, setDashboard] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const dashboardQuery = useMemberDashboardQuery(token, 8)
+  const dashboard = dashboardQuery.data?.dashboard ?? null
+  const error = dashboardQuery.error
+    ? getServerStateErrorMessage(dashboardQuery.error, 'Failed to load member dashboard.')
+    : ''
   const displayName = user?.email ? user.email.split('@')[0] : 'Member'
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      if (!token) return
-      try {
-        setLoading(true)
-        setError('')
-        const data = await api.getMemberDashboard(token, 8)
-        setDashboard(data.dashboard)
-      } catch (err) {
-        setError(err?.message || 'Failed to load member dashboard.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDashboard()
-  }, [token])
+  if (dashboardQuery.isPending) {
+    return (
+      <DashboardLayout title="Member">
+        <DashboardLoadingState label="Loading member dashboard" />
+      </DashboardLayout>
+    )
+  }
 
   const workoutLive = dashboard?.assignedWorkoutPlans || []
   const dietLive = dashboard?.assignedDietPlans || []
   const progressLive = dashboard?.recentProgressEntries || []
-  const hasLiveData = workoutLive.length > 0 || dietLive.length > 0 || progressLive.length > 0
+  const subscriptionSummary = dashboard?.activeSubscriptionSummary || null
+  const hasSubscriptionData = Boolean(subscriptionSummary)
+  const hasLiveData =
+    workoutLive.length > 0 || dietLive.length > 0 || progressLive.length > 0 || hasSubscriptionData
 
-  const workoutPlans = hasLiveData
-    ? workoutLive
-    : [
-        { id: 'w-1', title: 'Push Strength + Core', description: 'Bench, incline DB, cable fly, planks', updatedAt: new Date().toISOString() },
-        { id: 'w-2', title: 'Lower Body Progressive', description: 'Back squat, RDL, split squat, calf raises', updatedAt: new Date().toISOString() },
-      ]
-  const dietPlans = hasLiveData
-    ? dietLive
-    : [
-        { id: 'd-1', title: 'Lean Gain Plan', description: '2,450 kcal / high protein / 5 meals' },
-        { id: 'd-2', title: 'Rest Day Nutrition', description: '2,150 kcal / lower carbs / hydration focus' },
-      ]
-  const progressEntries = hasLiveData
-    ? progressLive
-    : [
-        { id: 'p-1', recordedAt: new Date().toISOString(), weight: 74.8, bodyFat: 19.2, bmi: 24.3, notes: 'Strength endurance improved.' },
-        { id: 'p-2', recordedAt: new Date(Date.now() - 86400000 * 7).toISOString(), weight: 75.4, bodyFat: 19.9, bmi: 24.6, notes: 'Recovery and sleep quality improved.' },
-      ]
+  const workoutPlans = workoutLive
+  const dietPlans = dietLive
+  const progressEntries = progressLive
 
   const metrics = [
     { label: 'Assigned Workout Plans', value: workoutPlans.length, hint: 'Current training blocks' },
     { label: 'Assigned Diet Plans', value: dietPlans.length, hint: 'Nutrition protocols' },
     { label: 'Recent Progress Entries', value: progressEntries.length, hint: 'Logged performance' },
-    { label: 'Subscription Status', value: dashboard?.activeSubscriptionSummary?.status ?? (hasLiveData ? 'NONE' : 'ACTIVE'), hint: 'Membership lifecycle' },
+    { label: 'Subscription Status', value: subscriptionSummary?.status ?? 'NONE', hint: 'Membership lifecycle' },
   ]
 
   const reminders = [
-    'Hydration target today: 3.5L',
-    'Upload meal logs before 9:00 PM',
-    'Recovery stretch routine after workout',
+    'Log your first progress entry after your initial assessment',
+    'Ask your trainer for workout and diet assignments if this page is empty',
+    'Check whether your membership is still pending activation or already active',
   ]
 
   return (
     <DashboardLayout title="Member">
-      {loading && <p className="text-sm font-semibold uppercase tracking-[0.08em] text-gray-300">Loading dashboard...</p>}
-      {error && <p className="text-sm font-semibold text-[#E21A2C]">{error}</p>}
-      {!hasLiveData && !loading && (
+      {error && <StatusBanner message={error} />}
+      {!hasLiveData && !dashboardQuery.isPending && (
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-yellow-300">
-          Presentation mode: showing representative member journey data.
+          Live mode: this dashboard will populate after plans and progress data are assigned.
         </p>
       )}
 
@@ -159,19 +140,29 @@ export default function MemberDashboard() {
             <div className="border border-white/10 bg-black/30 p-4">
               <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Active Plan</p>
               <p className="mt-1 text-lg font-black text-white">
-                {dashboard?.activeSubscriptionSummary?.planName || (hasLiveData ? 'No active plan' : 'Pro Quarterly')}
+                {subscriptionSummary?.planName || 'No current membership'}
               </p>
             </div>
             <div className="border border-white/10 bg-black/30 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Next Billing Date</p>
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">
+                {subscriptionSummary?.status === 'PENDING_ACTIVATION' ? 'Activation State' : 'Current Period Ends'}
+              </p>
               <p className="mt-1 text-lg font-black text-white">
-                {dashboard?.activeSubscriptionSummary?.endDate
-                  ? formatDate(dashboard.activeSubscriptionSummary.endDate)
-                  : hasLiveData
-                    ? '-'
-                    : 'March 28, 2026'}
+                {subscriptionSummary?.status === 'PENDING_ACTIVATION'
+                  ? 'Waiting for payment approval'
+                  : subscriptionSummary?.endDate
+                    ? formatDate(subscriptionSummary.endDate)
+                    : '-'}
               </p>
             </div>
+            {subscriptionSummary?.status && (
+              <div className="border border-white/10 bg-black/30 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Lifecycle Status</p>
+                <p className="mt-1 text-lg font-black text-white">
+                  {String(subscriptionSummary.status).replace(/_/g, ' ')}
+                </p>
+              </div>
+            )}
           </div>
         </article>
       </section>

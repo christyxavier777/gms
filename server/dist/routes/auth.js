@@ -6,8 +6,24 @@ const zod_1 = require("zod");
 const schemas_1 = require("../auth/schemas");
 const service_1 = require("../auth/service");
 const session_1 = require("../auth/session");
+const env_1 = require("../config/env");
 const http_error_1 = require("../middleware/http-error");
+const rate_limit_1 = require("../middleware/rate-limit");
 exports.authRouter = (0, express_1.Router)();
+function getLoginThrottleDetails(req) {
+    const loginThrottle = req.rateLimits?.login;
+    if (!loginThrottle) {
+        return null;
+    }
+    return {
+        throttleScope: "login",
+        remainingAttempts: loginThrottle.remaining,
+        limit: loginThrottle.limit,
+        retryAfterSeconds: loginThrottle.retryAfterSec,
+        windowSeconds: loginThrottle.windowSec,
+        resetAtUnix: loginThrottle.resetAtUnix,
+    };
+}
 exports.authRouter.post("/register", async (req, res) => {
     try {
         const payload = schemas_1.registerSchema.parse(req.body);
@@ -21,7 +37,7 @@ exports.authRouter.post("/register", async (req, res) => {
         throw error;
     }
 });
-exports.authRouter.post("/login", async (req, res) => {
+exports.authRouter.post("/login", rate_limit_1.loginRateLimiter, async (req, res) => {
     try {
         const payload = schemas_1.loginSchema.parse(req.body);
         const loginMeta = {};
@@ -33,8 +49,9 @@ exports.authRouter.post("/login", async (req, res) => {
         const session = await (0, service_1.loginUser)(payload, loginMeta);
         res.cookie((0, session_1.getSessionCookieName)(), session.sessionToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            secure: env_1.env.cookie.secure,
+            sameSite: env_1.env.cookie.sameSite,
+            ...(env_1.env.cookie.domain ? { domain: env_1.env.cookie.domain } : {}),
             expires: session.expiresAt,
             path: "/",
         });
@@ -44,6 +61,16 @@ exports.authRouter.post("/login", async (req, res) => {
         if (error instanceof zod_1.ZodError) {
             throw new http_error_1.HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());
         }
+        if (error instanceof http_error_1.HttpError && error.code === "INVALID_CREDENTIALS") {
+            const throttleDetails = getLoginThrottleDetails(req);
+            if (throttleDetails) {
+                const existingDetails = error.details && typeof error.details === "object" ? error.details : {};
+                throw new http_error_1.HttpError(error.status, error.code, error.message, {
+                    ...existingDetails,
+                    ...throttleDetails,
+                });
+            }
+        }
         throw error;
     }
 });
@@ -52,7 +79,10 @@ exports.authRouter.post("/logout", async (req, res) => {
     if (sessionToken) {
         await (0, session_1.revokeSession)(sessionToken);
     }
-    res.clearCookie((0, session_1.getSessionCookieName)(), { path: "/" });
+    res.clearCookie((0, session_1.getSessionCookieName)(), {
+        path: "/",
+        ...(env_1.env.cookie.domain ? { domain: env_1.env.cookie.domain } : {}),
+    });
     res.status(204).send();
 });
 //# sourceMappingURL=auth.js.map

@@ -15,3 +15,12 @@ export type SafeUser = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type SafeAuthSession = {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: Date;
+  expiresAt: Date;
+  isCurrent: boolean;
+};

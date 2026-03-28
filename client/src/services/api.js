@@ -1,4 +1,17 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim() || ''
+const API_URL = configuredApiUrl.replace(/\/+$/, '') || (import.meta.env.DEV ? 'http://localhost:4000' : '')
+
+function buildQueryString(params = {}) {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    searchParams.set(key, String(value))
+  })
+
+  const queryString = searchParams.toString()
+  return queryString ? `?${queryString}` : ''
+}
 
 async function request(path, options = {}) {
   const { headers = {}, ...rest } = options
@@ -13,9 +26,13 @@ async function request(path, options = {}) {
     const message =
       data?.error?.message || data?.message || `Request failed with status ${response.status}`
     const error = new Error(message)
+    const retryAfterHeader = response.headers.get('Retry-After')
+    const rateLimitResetHeader = response.headers.get('X-RateLimit-Reset')
     error.status = response.status
     error.code = data?.error?.code || null
     error.details = data?.error?.details || null
+    error.retryAfter = retryAfterHeader ? Number(retryAfterHeader) : null
+    error.rateLimitResetAt = rateLimitResetHeader ? Number(rateLimitResetHeader) : null
     throw error
   }
 
@@ -47,9 +64,32 @@ export const api = {
       body: JSON.stringify(userData),
     }),
 
+  listMembershipPlans: () =>
+    request('/membership-plans', {
+      method: 'GET',
+    }),
+
   me: (token) =>
     request('/me', {
       method: 'GET',
+      headers: authHeaders(token),
+    }),
+
+  listMySessions: (token) =>
+    request('/me/sessions', {
+      method: 'GET',
+      headers: authHeaders(token),
+    }),
+
+  revokeOtherSessions: (token) =>
+    request('/me/sessions/revoke-others', {
+      method: 'POST',
+      headers: authHeaders(token),
+    }),
+
+  revokeAllSessions: (token) =>
+    request('/me/sessions/revoke-all', {
+      method: 'POST',
       headers: authHeaders(token),
     }),
 
@@ -69,6 +109,38 @@ export const api = {
     request(`/dashboard/member?limit=${limit}`, {
       method: 'GET',
       headers: authHeaders(token),
+    }),
+
+  getScheduleWorkspace: (token) =>
+    request('/schedule', {
+      method: 'GET',
+      headers: authHeaders(token),
+    }),
+
+  createScheduleSession: (token, payload) =>
+    request('/schedule', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(token),
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  bookScheduleSession: (token, sessionId) =>
+    request(`/schedule/${sessionId}/book`, {
+      method: 'POST',
+      headers: authHeaders(token),
+    }),
+
+  updateScheduleBookingStatus: (token, bookingId, status) =>
+    request(`/schedule/bookings/${bookingId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(token),
+      },
+      body: JSON.stringify({ status }),
     }),
 
   listWorkoutPlans: (token) =>
@@ -123,20 +195,36 @@ export const api = {
       body: JSON.stringify({ memberId }),
     }),
 
-  listUsers: (token, page = 1, pageSize = 100) =>
-    request(`/users?page=${page}&pageSize=${pageSize}`, {
+  listUsers: (token, params = {}) =>
+    request(`/users${buildQueryString(params)}`, {
       method: 'GET',
       headers: authHeaders(token),
     }),
 
-  listSubscriptions: (token) =>
-    request('/subscriptions', {
+  listAccessibleMembers: (token, search = '', limit = 100) =>
+    request(`/users/members/available?search=${encodeURIComponent(search)}&limit=${limit}`, {
+      method: 'GET',
+      headers: authHeaders(token),
+    }),
+
+  listSubscriptions: (token, params = {}) =>
+    request(`/subscriptions${buildQueryString(params)}`, {
       method: 'GET',
       headers: authHeaders(token),
     }),
 
   createSubscription: (token, payload) =>
     request('/subscriptions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(token),
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  createOnboardingSubscription: (token, payload) =>
+    request('/me/subscription/onboarding', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -167,14 +255,14 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  listAllProgress: (token) =>
-    request('/progress', {
+  listAllProgress: (token, params = {}) =>
+    request(`/progress${buildQueryString(params)}`, {
       method: 'GET',
       headers: authHeaders(token),
     }),
 
-  listProgressByUserId: (token, userId) =>
-    request(`/progress/${userId}`, {
+  listProgressByUserId: (token, userId, params = {}) =>
+    request(`/progress/${userId}${buildQueryString(params)}`, {
       method: 'GET',
       headers: authHeaders(token),
     }),
@@ -192,9 +280,19 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  listPayments: (token) =>
-    request('/payments', {
+  listPayments: (token, params = {}) =>
+    request(`/payments${buildQueryString(params)}`, {
       method: 'GET',
       headers: authHeaders(token),
+    }),
+
+  updatePaymentStatus: (token, paymentId, status, verificationNotes) =>
+    request(`/payments/${paymentId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+      body: JSON.stringify({
+        status,
+        ...(verificationNotes ? { verificationNotes } : {}),
+      }),
     }),
 }

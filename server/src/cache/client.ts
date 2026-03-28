@@ -6,6 +6,20 @@ type CacheEntry = {
   value: string;
 };
 
+type WindowCounter = {
+  count: number;
+  retryAfterSec: number;
+};
+
+export type CacheHealthSnapshot = {
+  status: "up" | "down" | "fallback";
+  configured: boolean;
+  ready: boolean;
+  mode: "redis" | "memory_fallback";
+  latencyMs: number | null;
+  detail?: string;
+};
+
 const memoryStore = new Map<string, CacheEntry>();
 
 let redisClient: any = null;
@@ -43,17 +57,28 @@ function setMemory(key: string, value: string, ttlSec: number): void {
   memoryStore.set(key, { value, expiresAt: Date.now() + ttlSec * 1000 });
 }
 
-function incrMemory(key: string, windowSec: number): number {
+function retryAfterFromExpiry(expiresAt: number, fallbackSec: number): number {
+  const seconds = Math.ceil((expiresAt - Date.now()) / 1000);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : fallbackSec;
+}
+
+function incrMemory(key: string, windowSec: number): WindowCounter {
   const now = Date.now();
   const current = memoryStore.get(key);
   if (!current || current.expiresAt <= now) {
     setMemory(key, "1", windowSec);
-    return 1;
+    return {
+      count: 1,
+      retryAfterSec: windowSec,
+    };
   }
 
   const next = Number.parseInt(current.value, 10) + 1;
   memoryStore.set(key, { value: String(next), expiresAt: current.expiresAt });
-  return next;
+  return {
+    count: next,
+    retryAfterSec: retryAfterFromExpiry(current.expiresAt, windowSec),
+  };
 }
 
 export async function cacheGet(key: string): Promise<string | null> {
@@ -151,7 +176,7 @@ export async function cacheDelByPrefix(prefix: string): Promise<number> {
   return deleted;
 }
 
-export async function cacheIncrWindow(key: string, windowSec: number): Promise<number> {
+export async function cacheIncrWindow(key: string, windowSec: number): Promise<WindowCounter> {
   const redis = getRedisClient();
   if (redis) {
     try {
@@ -160,13 +185,73 @@ export async function cacheIncrWindow(key: string, windowSec: number): Promise<n
       if (count === 1) {
         await redis.expire(key, windowSec);
       }
-      return count;
+      const ttl = await redis.ttl(key);
+      return {
+        count,
+        retryAfterSec: typeof ttl === "number" && ttl > 0 ? ttl : windowSec,
+      };
     } catch {
       // Continue with memory fallback.
     }
   }
 
   return incrMemory(key, windowSec);
+}
+
+export async function getCacheHealth(): Promise<CacheHealthSnapshot> {
+  if (!env.redisUrl) {
+    return {
+      status: "fallback",
+      configured: false,
+      ready: true,
+      mode: "memory_fallback",
+      latencyMs: null,
+      detail: "REDIS_URL is not configured; using in-memory cache fallback.",
+    };
+  }
+
+  const redis = getRedisClient();
+  if (!redis) {
+    return {
+      status: "down",
+      configured: true,
+      ready: false,
+      mode: "memory_fallback",
+      latencyMs: null,
+      detail: "Redis driver is unavailable; runtime will fall back to in-memory cache.",
+    };
+  }
+
+  const startedAt = Date.now();
+
+  try {
+    if (redis.status === "wait") {
+      await redis.connect();
+    }
+
+    await redis.ping();
+
+    return {
+      status: "up",
+      configured: true,
+      ready: true,
+      mode: "redis",
+      latencyMs: Date.now() - startedAt,
+      detail: "Redis responded to PING.",
+    };
+  } catch (error) {
+    return {
+      status: "down",
+      configured: true,
+      ready: false,
+      mode: "memory_fallback",
+      latencyMs: Date.now() - startedAt,
+      detail:
+        error instanceof Error
+          ? `Redis health check failed: ${error.message}`
+          : "Redis health check failed.",
+    };
+  }
 }
 
 export function logCacheUnavailableIfNeeded(): void {

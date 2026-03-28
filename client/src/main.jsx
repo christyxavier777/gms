@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext'
+import { AppQueryProvider } from './server-state/queryClient.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <AppQueryProvider>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </AppQueryProvider>
   </StrictMode>,
 )

@@ -6,6 +6,7 @@ exports.cacheSetIfAbsent = cacheSetIfAbsent;
 exports.cacheDel = cacheDel;
 exports.cacheDelByPrefix = cacheDelByPrefix;
 exports.cacheIncrWindow = cacheIncrWindow;
+exports.getCacheHealth = getCacheHealth;
 exports.logCacheUnavailableIfNeeded = logCacheUnavailableIfNeeded;
 const env_1 = require("../config/env");
 const logger_1 = require("../utils/logger");
@@ -44,16 +45,26 @@ function getMemory(key) {
 function setMemory(key, value, ttlSec) {
     memoryStore.set(key, { value, expiresAt: Date.now() + ttlSec * 1000 });
 }
+function retryAfterFromExpiry(expiresAt, fallbackSec) {
+    const seconds = Math.ceil((expiresAt - Date.now()) / 1000);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : fallbackSec;
+}
 function incrMemory(key, windowSec) {
     const now = Date.now();
     const current = memoryStore.get(key);
     if (!current || current.expiresAt <= now) {
         setMemory(key, "1", windowSec);
-        return 1;
+        return {
+            count: 1,
+            retryAfterSec: windowSec,
+        };
     }
     const next = Number.parseInt(current.value, 10) + 1;
     memoryStore.set(key, { value: String(next), expiresAt: current.expiresAt });
-    return next;
+    return {
+        count: next,
+        retryAfterSec: retryAfterFromExpiry(current.expiresAt, windowSec),
+    };
 }
 async function cacheGet(key) {
     const redis = getRedisClient();
@@ -161,13 +172,67 @@ async function cacheIncrWindow(key, windowSec) {
             if (count === 1) {
                 await redis.expire(key, windowSec);
             }
-            return count;
+            const ttl = await redis.ttl(key);
+            return {
+                count,
+                retryAfterSec: typeof ttl === "number" && ttl > 0 ? ttl : windowSec,
+            };
         }
         catch {
             // Continue with memory fallback.
         }
     }
     return incrMemory(key, windowSec);
+}
+async function getCacheHealth() {
+    if (!env_1.env.redisUrl) {
+        return {
+            status: "fallback",
+            configured: false,
+            ready: true,
+            mode: "memory_fallback",
+            latencyMs: null,
+            detail: "REDIS_URL is not configured; using in-memory cache fallback.",
+        };
+    }
+    const redis = getRedisClient();
+    if (!redis) {
+        return {
+            status: "down",
+            configured: true,
+            ready: false,
+            mode: "memory_fallback",
+            latencyMs: null,
+            detail: "Redis driver is unavailable; runtime will fall back to in-memory cache.",
+        };
+    }
+    const startedAt = Date.now();
+    try {
+        if (redis.status === "wait") {
+            await redis.connect();
+        }
+        await redis.ping();
+        return {
+            status: "up",
+            configured: true,
+            ready: true,
+            mode: "redis",
+            latencyMs: Date.now() - startedAt,
+            detail: "Redis responded to PING.",
+        };
+    }
+    catch (error) {
+        return {
+            status: "down",
+            configured: true,
+            ready: false,
+            mode: "memory_fallback",
+            latencyMs: Date.now() - startedAt,
+            detail: error instanceof Error
+                ? `Redis health check failed: ${error.message}`
+                : "Redis health check failed.",
+        };
+    }
 }
 function logCacheUnavailableIfNeeded() {
     if (!env_1.env.redisUrl) {

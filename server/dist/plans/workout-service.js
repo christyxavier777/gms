@@ -50,7 +50,7 @@ async function assertAssignableMember(memberId) {
 // Creates a workout plan owned by ADMIN or TRAINER.
 async function createWorkoutPlan(requester, payload) {
     if (requester.role !== client_1.Role.ADMIN && requester.role !== client_1.Role.TRAINER) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to create workout plans");
+        throw new http_error_1.HttpError(403, "WORKOUT_PLAN_CREATE_FORBIDDEN", "You are not allowed to create workout plans");
     }
     const plan = await prisma.workoutPlan.create({
         data: {
@@ -84,7 +84,7 @@ async function getWorkoutPlanById(requester, planId) {
         throw new http_error_1.HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
     }
     if (!canReadWorkoutPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to access this workout plan");
+        throw new http_error_1.HttpError(403, "WORKOUT_PLAN_READ_FORBIDDEN", "You are not allowed to access this workout plan");
     }
     return toSafeWorkoutPlan(plan);
 }
@@ -95,7 +95,7 @@ async function updateWorkoutPlan(requester, planId, payload) {
         throw new http_error_1.HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
     }
     if (!canManageWorkoutPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to modify this workout plan");
+        throw new http_error_1.HttpError(403, "WORKOUT_PLAN_UPDATE_FORBIDDEN", "You are not allowed to modify this workout plan");
     }
     const updated = await prisma.workoutPlan.update({
         where: { id: planId },
@@ -114,7 +114,7 @@ async function deleteWorkoutPlan(requester, planId) {
         throw new http_error_1.HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
     }
     if (!canManageWorkoutPlan(requester, plan)) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "You are not allowed to delete this workout plan");
+        throw new http_error_1.HttpError(403, "WORKOUT_PLAN_DELETE_FORBIDDEN", "You are not allowed to delete this workout plan");
     }
     await prisma.workoutPlan.delete({ where: { id: planId } });
     await (0, cache_1.invalidateDashboardCache)("workout_plan_deleted");
@@ -126,7 +126,7 @@ async function assignWorkoutPlan(requester, planId, memberId) {
         throw new http_error_1.HttpError(404, "WORKOUT_PLAN_NOT_FOUND", "Workout plan not found");
     }
     if (requester.role !== client_1.Role.ADMIN) {
-        throw new http_error_1.HttpError(403, "FORBIDDEN", "Only admins can assign workout plans");
+        throw new http_error_1.HttpError(403, "WORKOUT_PLAN_ASSIGN_FORBIDDEN", "Only admins can assign workout plans");
     }
     await assertAssignableMember(memberId);
     const updated = await prisma.workoutPlan.update({

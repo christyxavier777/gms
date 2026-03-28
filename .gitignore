@@ -1,0 +1,7 @@
+# Workspace runtime artifacts
+/server/*.log
+/server/*.pid
+/server/tmp.*
+/client/*.log
+/client/*.pid
+

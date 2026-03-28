@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.progressUserIdParamSchema = exports.progressIdParamSchema = exports.createProgressSchema = void 0;
+exports.listProgressQuerySchema = exports.progressUserIdParamSchema = exports.progressIdParamSchema = exports.createProgressSchema = void 0;
+const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 exports.createProgressSchema = zod_1.z
     .object({
@@ -33,5 +34,20 @@ exports.progressIdParamSchema = zod_1.z.object({
 });
 exports.progressUserIdParamSchema = zod_1.z.object({
     userId: zod_1.z.string().uuid("userId must be a valid UUID"),
+});
+exports.listProgressQuerySchema = zod_1.z.object({
+    page: zod_1.z.coerce.number().int().min(1).default(1),
+    pageSize: zod_1.z.coerce.number().int().min(1).max(100).default(10),
+    search: zod_1.z.string().trim().max(100).default(""),
+    dietCategory: zod_1.z
+        .enum([
+        client_1.DietCategory.UNDERWEIGHT,
+        client_1.DietCategory.NORMAL,
+        client_1.DietCategory.OVERWEIGHT,
+        client_1.DietCategory.OBESE,
+    ])
+        .optional(),
+    sortBy: zod_1.z.enum(["recordedAt", "createdAt"]).default("recordedAt"),
+    sortOrder: zod_1.z.enum(["asc", "desc"]).default("desc"),
 });
 //# sourceMappingURL=schemas.js.map

@@ -10,6 +10,7 @@ const password_1 = require("./password");
 const env_1 = require("../config/env");
 const session_1 = require("./session");
 const cache_1 = require("../dashboard/cache");
+const business_flow_metrics_1 = require("../observability/business-flow-metrics");
 const prisma = (0, client_2.createPrismaClient)();
 function toSafeUser(user) {
     return {
@@ -58,6 +59,9 @@ async function registerUser(input) {
         },
     });
     await (0, cache_1.invalidateDashboardCache)("user_registered");
+    if (requestedRole === client_1.Role.MEMBER) {
+        (0, business_flow_metrics_1.recordMemberRegistration)(user.id);
+    }
     return toSafeUser(user);
 }
 async function loginUser(input, meta) {

@@ -13,6 +13,13 @@ Academic/demo-grade backend API for a gym management system. Core backend scope 
 - Phase 6: Role-based read-only dashboards
 - Phase 7: Security hardening and stabilization (helmet, rate limits, sanitization, normalized errors)
 
+## Operational Endpoints
+
+- `GET /health/live`: process liveness metadata without dependency checks
+- `GET /health/ready`: structured readiness report for PostgreSQL and cache/Redis state
+- `GET /health`: backwards-compatible health summary with dependency details included
+- `GET /dashboard/admin/performance`: infra observability plus business-flow metrics for onboarding funnel progress and payment review outcomes
+
 ## Tech Stack
 
 - Runtime: Node.js
@@ -43,6 +50,7 @@ server/
     subscriptions/
     progress/
     dashboard/
+    jobs/
     routes/
     middleware/
     prisma/
@@ -69,12 +77,16 @@ server/
 | `SLO_ERROR_RATE_PCT` | No | `1` | 5xx error-rate SLO threshold (percent) |
 | `JWT_SECRET` | Yes | - | JWT signing secret |
 | `JWT_EXPIRES_IN` | Yes | - | JWT TTL (example: `1d`) |
-| `ADMIN_NAME` | Yes | - | Seed admin display name |
-| `ADMIN_EMAIL` | Yes | - | Seed admin email (must be valid `@gmail.com`) |
-| `ADMIN_PASSWORD` | Yes | - | Seed admin password |
+| `CORS_ALLOWED_ORIGINS` | No | `http://localhost:5173,http://127.0.0.1:5173` in local dev | Comma-separated frontend origins allowed to call the API |
+| `COOKIE_SECURE` | No | `false` locally, `true` recommended in production | Whether auth session cookies require HTTPS |
+| `COOKIE_SAME_SITE` | No | `lax` | Cookie SameSite mode (`lax`, `strict`, `none`) |
+| `COOKIE_DOMAIN` | No | - | Optional shared cookie domain for deployed environments |
+| `ADMIN_NAME` | No | - | Seed admin display name (`seed:admin` only) |
+| `ADMIN_EMAIL` | No | - | Seed admin email address (`seed:admin` only) |
+| `ADMIN_PASSWORD` | No | - | Seed admin password (`seed:admin` only) |
 | `JSON_BODY_LIMIT` | No | `100kb` | Global JSON/urlencoded request size cap |
-| `AUTH_RATE_LIMIT_WINDOW_MS` | No | `900000` | Auth limiter window |
-| `AUTH_RATE_LIMIT_MAX` | No | `20` | Max auth requests/window |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | No | `900000` | Shared auth/login throttle window |
+| `AUTH_RATE_LIMIT_MAX` | No | `20` | Max auth requests per IP window and max login attempts per email/IP window |
 | `MUTATION_RATE_LIMIT_WINDOW_MS` | No | `60000` | Mutation limiter window |
 | `MUTATION_RATE_LIMIT_MAX` | No | `120` | Max write requests/window |
 | `WEARABLE_SYNC_RATE_LIMIT_WINDOW_MS` | No | `60000` | Wearable sync limiter window |
@@ -82,6 +94,7 @@ server/
 | `WEARABLE_WEBHOOK_TOLERANCE_SEC` | No | `300` | Max allowed signature timestamp drift for wearable webhooks |
 | `WEARABLE_WEBHOOK_DEDUPE_TTL_SEC` | No | `86400` | Retention window for processed webhook event IDs (idempotency) |
 | `WEARABLE_AUDIT_DB_TIMEOUT_MS` | No | `250` | Timeout for wearable audit DB reads/writes before memory fallback |
+| `SUBSCRIPTION_EXPIRY_INTERVAL_MS` | No | `300000` | Worker interval for expiring overdue subscriptions |
 | `WEARABLE_AUDIT_RETENTION_DAYS` | No | `30` | Retention period for persisted wearable webhook audit rows |
 | `WEARABLE_AUDIT_CLEANUP_INTERVAL_MS` | No | `3600000` | Background cleanup interval for audit row retention |
 | `WEARABLE_WEBHOOK_SECRET_FITBIT` | No | - | HMAC secret for Fitbit webhook signature validation |
@@ -114,7 +127,7 @@ npm run prisma:migrate:deploy
 npm run prisma:generate
 ```
 
-5. Seed admin user
+5. Seed admin user (optional)
 
 ```bash
 npm run seed:admin
@@ -124,6 +137,20 @@ npm run seed:admin
 
 ```bash
 npm run dev
+```
+
+7. Run background jobs worker
+
+```bash
+npm run jobs:worker
+```
+
+The API can boot without the worker, but subscription expiry persistence and wearable audit retention cleanup are handled by the worker process.
+
+After `npm run build`, the production worker entrypoint is:
+
+```bash
+npm run start:worker
 ```
 
 ## Dashboard Load Test
@@ -149,11 +176,25 @@ Recommended environment variables before running:
 - `LOADTEST_ENFORCE_SLO`: Set `true` to exit non-zero when SLO is breached
 - `LOADTEST_REPORT_PATH`: Optional output path for JSON report artifact
 
+The admin performance payload now combines:
+
+- request latency and 5xx-rate metrics
+- dashboard cache hit/set/invalidation counters
+- onboarding funnel counters (`member_registered`, onboarding subscription creation, onboarding payment submission)
+- payment review outcome counters (`SUCCESS`, `FAILED`, reopened `PENDING`) plus a recent event sample for operator inspection
+
+## Deployment Notes
+
+- Same-origin deployment: leave `VITE_API_URL` empty on the client and proxy frontend requests to this API.
+- Split frontend/backend deployment: set `CORS_ALLOWED_ORIGINS` to your deployed frontend URL(s).
+- For cross-site auth cookies, set `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=none`.
+- Keep `TRAINER_INVITE_CODE` and `ADMIN_INVITE_CODE` empty in production unless self-registration is intentionally enabled.
+
 ## Security Notes
 
 - `helmet` enabled and `x-powered-by` disabled.
 - Request body size cap enforced via `express.json` and `express.urlencoded`.
-- Auth route rate limiting and write-route rate limiting enabled.
+- Auth route rate limiting, login throttling visibility, and write-route rate limiting enabled.
 - Input sanitization removes null bytes and trims params/query values.
 - Error envelope is normalized (`{ error: { code, message, details? } }`).
 - Password hashes are never returned by API responses.
@@ -165,7 +206,6 @@ Recommended environment variables before running:
 - Mobile app implementation
 - AI recommendations
 - Analytics/BI pipelines
-- Background schedulers/cron jobs
 - Real-time notifications
 
 ## API and Architecture Docs

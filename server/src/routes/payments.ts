@@ -1,16 +1,15 @@
 import { PaymentStatus, Role } from "@prisma/client";
 import { Router } from "express";
-import { ZodError, z } from "zod";
+import { ZodError } from "zod";
 import { HttpError } from "../middleware/http-error";
 import { requireAuth } from "../middleware/require-auth";
-import { createPaymentSchema, paymentIdParamSchema } from "../payments/schemas";
+import {
+  createPaymentSchema,
+  listPaymentsQuerySchema,
+  paymentIdParamSchema,
+  updatePaymentStatusSchema,
+} from "../payments/schemas";
 import { createPayment, getPaymentById, listPayments, updatePaymentStatus } from "../payments/service";
-
-const updatePaymentStatusSchema = z
-  .object({
-    status: z.enum([PaymentStatus.PENDING, PaymentStatus.SUCCESS, PaymentStatus.FAILED]),
-  })
-  .strict();
 
 export const paymentsRouter = Router();
 
@@ -29,9 +28,17 @@ paymentsRouter.post("/payments/upi", requireAuth, async (req, res) => {
 });
 
 paymentsRouter.get("/payments", requireAuth, async (req, res) => {
-  if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
-  const payments = await listPayments(req.auth);
-  res.status(200).json({ payments });
+  try {
+    if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+    const query = listPaymentsQuerySchema.parse(req.query);
+    const result = await listPayments(req.auth, query);
+    res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new HttpError(400, "VALIDATION_ERROR", "Query parameters are invalid", error.flatten());
+    }
+    throw error;
+  }
 });
 
 paymentsRouter.get("/payments/:id", requireAuth, async (req, res) => {
@@ -52,11 +59,14 @@ paymentsRouter.patch("/payments/:id/status", requireAuth, async (req, res) => {
   try {
     if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
     if (req.auth.role !== Role.ADMIN) {
-      throw new HttpError(403, "FORBIDDEN", "Only admins can update payment status");
+      throw new HttpError(403, "PAYMENT_REVIEW_FORBIDDEN", "Only admins can update payment status");
     }
     const params = paymentIdParamSchema.parse(req.params);
     const payload = updatePaymentStatusSchema.parse(req.body);
-    const payment = await updatePaymentStatus(req.auth, params.id, payload.status as PaymentStatus);
+    const payment = await updatePaymentStatus(req.auth, params.id, {
+      status: payload.status as PaymentStatus,
+      verificationNotes: payload.verificationNotes,
+    });
     res.status(200).json({ payment });
   } catch (error) {
     if (error instanceof ZodError) {

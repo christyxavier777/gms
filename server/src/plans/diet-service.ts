@@ -47,7 +47,7 @@ export async function createDietPlan(
   payload: { title: string; description: string },
 ): Promise<SafePlan> {
   if (requester.role !== Role.ADMIN && requester.role !== Role.TRAINER) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to create diet plans");
+    throw new HttpError(403, "DIET_PLAN_CREATE_FORBIDDEN", "You are not allowed to create diet plans");
   }
 
   const plan = await prisma.dietPlan.create({
@@ -88,7 +88,7 @@ export async function getDietPlanById(
     throw new HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
   }
   if (!canReadDietPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to access this diet plan");
+    throw new HttpError(403, "DIET_PLAN_READ_FORBIDDEN", "You are not allowed to access this diet plan");
   }
   return toSafeDietPlan(plan);
 }
@@ -104,7 +104,11 @@ export async function updateDietPlan(
     throw new HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
   }
   if (!canManageDietPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to modify this diet plan");
+    throw new HttpError(
+      403,
+      "DIET_PLAN_UPDATE_FORBIDDEN",
+      "You are not allowed to modify this diet plan",
+    );
   }
 
   const updated = await prisma.dietPlan.update({
@@ -129,7 +133,7 @@ export async function deleteDietPlan(
     throw new HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
   }
   if (!canManageDietPlan(requester, plan)) {
-    throw new HttpError(403, "FORBIDDEN", "You are not allowed to delete this diet plan");
+    throw new HttpError(403, "DIET_PLAN_DELETE_FORBIDDEN", "You are not allowed to delete this diet plan");
   }
   await prisma.dietPlan.delete({ where: { id: planId } });
   await invalidateDashboardCache("diet_plan_deleted");
@@ -146,7 +150,7 @@ export async function assignDietPlan(
     throw new HttpError(404, "DIET_PLAN_NOT_FOUND", "Diet plan not found");
   }
   if (requester.role !== Role.ADMIN) {
-    throw new HttpError(403, "FORBIDDEN", "Only admins can assign diet plans");
+    throw new HttpError(403, "DIET_PLAN_ASSIGN_FORBIDDEN", "Only admins can assign diet plans");
   }
 
   await assertAssignableMember(memberId);

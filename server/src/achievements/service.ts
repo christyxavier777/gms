@@ -1,8 +1,9 @@
-import { PaymentStatus, Role, SubscriptionStatus } from "@prisma/client";
+import { PaymentStatus, Role } from "@prisma/client";
 import { HttpError } from "../middleware/http-error";
 import { createPrismaClient } from "../prisma/client";
 import { trainerCanReadMember } from "../users/service";
 import { generateBadges } from "./engine";
+import { getActiveSubscriptionWhere } from "../subscriptions/lifecycle";
 
 const prisma = createPrismaClient();
 
@@ -40,7 +41,7 @@ export async function getMemberAchievements(memberUserId: string): Promise<{
         select: { bmi: true },
       }),
       prisma.subscription.count({
-        where: { userId: memberUserId, status: SubscriptionStatus.ACTIVE },
+        where: { userId: memberUserId, ...getActiveSubscriptionWhere() },
       }),
       prisma.payment.count({
         where: { userId: memberUserId, status: PaymentStatus.SUCCESS },

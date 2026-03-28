@@ -22,6 +22,8 @@ enum SubscriptionStatus {
   ACTIVE
   EXPIRED
   CANCELLED
+  PENDING_ACTIVATION
+  CANCELLED_AT_PERIOD_END
 }
 
 enum DietCategory {
@@ -35,6 +37,20 @@ enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+enum ScheduleSessionType {
+  CLASS
+  PERSONAL_TRAINING
+  ASSESSMENT
+  RECOVERY
+}
+
+enum ScheduleBookingStatus {
+  BOOKED
+  ATTENDED
+  MISSED
+  CANCELLED
 }
 
 enum WearableWebhookProvider {
@@ -77,6 +93,14 @@ model User {
   payments              Payment[]
   trainerAssignments    TrainerMemberAssignment[] @relation("TrainerAssignments")
   memberAssignments     TrainerMemberAssignment[] @relation("MemberAssignments")
+  sessionsCreated       ScheduleSession[]         @relation("ScheduleSessionsCreated")
+  sessionsLed           ScheduleSession[]         @relation("ScheduleSessionsLed")
+  scheduleBookings      ScheduleBooking[]         @relation("ScheduleBookingsMember")
+  paymentsReviewed      Payment[]                 @relation("PaymentsReviewed")
+  paymentEventsChanged  PaymentEvent[]            @relation("PaymentEventsChangedBy")
+
+  @@index([role, status, createdAt])
+  @@index([role, status, name])
 }
 
 model WorkoutPlan {
@@ -90,6 +114,9 @@ model WorkoutPlan {
 
   createdBy  User  @relation("WorkoutPlansCreated", fields: [createdById], references: [id], onDelete: Restrict)
   assignedTo User? @relation("WorkoutPlansAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([createdById, assignedToId])
+  @@index([assignedToId, createdAt])
 }
 
 model DietPlan {
@@ -103,11 +130,31 @@ model DietPlan {
 
   createdBy  User  @relation("DietPlansCreated", fields: [createdById], references: [id], onDelete: Restrict)
   assignedTo User? @relation("DietPlansAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([createdById, assignedToId])
+  @@index([assignedToId, createdAt])
+}
+
+model MembershipPlan {
+  id           String         @id
+  name         String
+  priceMinor   Int
+  durationDays Int
+  perks        String
+  active       Boolean        @default(true)
+  displayOrder Int            @default(100)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([active, displayOrder])
 }
 
 model Subscription {
   id        String             @id @default(uuid())
   userId    String
+  planId    String
   planName  String
   startDate DateTime
   endDate   DateTime
@@ -115,10 +162,16 @@ model Subscription {
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user     User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  plan     MembershipPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
   payments Payment[]
 
   @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([planId, status])
+  @@index([status, createdAt])
+  @@index([status, startDate])
+  @@index([status, endDate])
 }
 
 model Progress {
@@ -139,6 +192,8 @@ model Progress {
   recordedBy User @relation("ProgressRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
 
   @@index([userId, recordedAt])
+  @@index([dietCategory, recordedAt])
+  @@index([createdAt])
 }
 
 model Session {
@@ -154,6 +209,7 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+  @@index([userId, revokedAt, expiresAt, createdAt])
 }
 
 model TrainerMemberAssignment {
@@ -167,24 +223,89 @@ model TrainerMemberAssignment {
   member  User @relation("MemberAssignments", fields: [memberId], references: [id], onDelete: Restrict)
 
   @@unique([trainerId, memberId])
+  @@index([trainerId, active])
   @@index([memberId, active])
 }
 
 model Payment {
-  id             String        @id @default(uuid())
-  transactionId  String        @unique
-  userId         String
-  subscriptionId String?
-  amount         Float
-  upiId          String
-  status         PaymentStatus @default(PENDING)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id                String        @id @default(uuid())
+  transactionId     String        @unique
+  userId            String
+  subscriptionId    String?
+  amountMinor       Int
+  upiId             String
+  proofReference    String?
+  status            PaymentStatus @default(PENDING)
+  reviewedById      String?
+  reviewedAt        DateTime?
+  verificationNotes String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  reviewedBy   User?         @relation("PaymentsReviewed", fields: [reviewedById], references: [id], onDelete: SetNull)
+  events       PaymentEvent[]
 
   @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([reviewedById, status])
+  @@index([status, createdAt])
+  @@index([status, updatedAt])
+}
+
+model PaymentEvent {
+  id                String         @id @default(uuid())
+  paymentId         String
+  fromStatus        PaymentStatus?
+  toStatus          PaymentStatus
+  changedById       String?
+  verificationNotes String?
+  createdAt         DateTime       @default(now())
+
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation("PaymentEventsChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([paymentId, createdAt])
+  @@index([changedById, createdAt])
+}
+
+model ScheduleSession {
+  id          String              @id @default(uuid())
+  title       String
+  description String?
+  sessionType ScheduleSessionType @default(CLASS)
+  location    String?
+  trainerId   String
+  createdById String
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  trainer   User              @relation("ScheduleSessionsLed", fields: [trainerId], references: [id], onDelete: Restrict)
+  createdBy User              @relation("ScheduleSessionsCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  bookings  ScheduleBooking[]
+
+  @@index([trainerId, startsAt])
+  @@index([startsAt, endsAt])
+}
+
+model ScheduleBooking {
+  id        String                @id @default(uuid())
+  sessionId String
+  memberId  String
+  status    ScheduleBookingStatus @default(BOOKED)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  session ScheduleSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  member  User            @relation("ScheduleBookingsMember", fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, memberId])
+  @@index([memberId, status])
+  @@index([memberId, updatedAt])
 }
 
 model WearableWebhookAuditEvent {

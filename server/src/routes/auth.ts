@@ -1,11 +1,29 @@
-import { Router } from "express";
+import { Request, Router } from "express";
 import { ZodError } from "zod";
 import { loginSchema, registerSchema } from "../auth/schemas";
 import { loginUser, registerUser } from "../auth/service";
 import { extractSessionToken, getSessionCookieName, revokeSession } from "../auth/session";
+import { env } from "../config/env";
 import { HttpError } from "../middleware/http-error";
+import { loginRateLimiter } from "../middleware/rate-limit";
 
 export const authRouter = Router();
+
+function getLoginThrottleDetails(req: Request) {
+  const loginThrottle = req.rateLimits?.login;
+  if (!loginThrottle) {
+    return null;
+  }
+
+  return {
+    throttleScope: "login",
+    remainingAttempts: loginThrottle.remaining,
+    limit: loginThrottle.limit,
+    retryAfterSeconds: loginThrottle.retryAfterSec,
+    windowSeconds: loginThrottle.windowSec,
+    resetAtUnix: loginThrottle.resetAtUnix,
+  };
+}
 
 authRouter.post("/register", async (req, res) => {
   try {
@@ -20,7 +38,7 @@ authRouter.post("/register", async (req, res) => {
   }
 });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", loginRateLimiter, async (req, res) => {
   try {
     const payload = loginSchema.parse(req.body);
     const loginMeta: { userAgent?: string; ipAddress?: string } = {};
@@ -32,8 +50,9 @@ authRouter.post("/login", async (req, res) => {
 
     res.cookie(getSessionCookieName(), session.sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: env.cookie.secure,
+      sameSite: env.cookie.sameSite,
+      ...(env.cookie.domain ? { domain: env.cookie.domain } : {}),
       expires: session.expiresAt,
       path: "/",
     });
@@ -42,6 +61,18 @@ authRouter.post("/login", async (req, res) => {
   } catch (error) {
     if (error instanceof ZodError) {
       throw new HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());
+    }
+    if (error instanceof HttpError && error.code === "INVALID_CREDENTIALS") {
+      const throttleDetails = getLoginThrottleDetails(req);
+      if (throttleDetails) {
+        const existingDetails =
+          error.details && typeof error.details === "object" ? (error.details as Record<string, unknown>) : {};
+
+        throw new HttpError(error.status, error.code, error.message, {
+          ...existingDetails,
+          ...throttleDetails,
+        });
+      }
     }
     throw error;
   }
@@ -52,6 +83,9 @@ authRouter.post("/logout", async (req, res) => {
   if (sessionToken) {
     await revokeSession(sessionToken);
   }
-  res.clearCookie(getSessionCookieName(), { path: "/" });
+  res.clearCookie(getSessionCookieName(), {
+    path: "/",
+    ...(env.cookie.domain ? { domain: env.cookie.domain } : {}),
+  });
   res.status(204).send();
 });

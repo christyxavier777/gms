@@ -7,6 +7,7 @@ const http_error_1 = require("../middleware/http-error");
 const client_2 = require("../prisma/client");
 const service_1 = require("../users/service");
 const engine_1 = require("./engine");
+const lifecycle_1 = require("../subscriptions/lifecycle");
 const prisma = (0, client_2.createPrismaClient)();
 async function assertMemberExists(memberUserId) {
     const user = await prisma.user.findUnique({
@@ -33,7 +34,7 @@ async function getMemberAchievements(memberUserId) {
             select: { bmi: true },
         }),
         prisma.subscription.count({
-            where: { userId: memberUserId, status: client_1.SubscriptionStatus.ACTIVE },
+            where: { userId: memberUserId, ...(0, lifecycle_1.getActiveSubscriptionWhere)() },
         }),
         prisma.payment.count({
             where: { userId: memberUserId, status: client_1.PaymentStatus.SUCCESS },
