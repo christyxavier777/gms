@@ -17,6 +17,8 @@ import {
   useMemberProgressQuery,
 } from '../server-state/queries'
 
+const EMPTY_MEMBERS = []
+
 function toDateTimeLocalValue(value) {
   try {
     const date = new Date(value)
@@ -119,7 +121,7 @@ export default function Progress() {
     getErrorMessage: 'Failed to delete progress entry.',
     invalidate: ({ queryClient }) => invalidateProgressQueries(queryClient),
   })
-  const members = membersQuery.data?.members ?? []
+  const members = membersQuery.data?.members ?? EMPTY_MEMBERS
   const progressData = isAdmin ? adminProgressQuery.data : memberProgressQuery.data
   const entries = progressData?.progress ?? []
   const pagination = progressData?.pagination || {
@@ -132,12 +134,13 @@ export default function Progress() {
   }
   const loading =
     (!isMember && membersQuery.isPending) ||
-    adminProgressQuery.isPending ||
+    (isAdmin && adminProgressQuery.isPending) ||
     (!isAdmin && Boolean(effectiveMemberId) && memberProgressQuery.isPending)
   const queryError = getCombinedServerStateError(
     [membersQuery, adminProgressQuery, memberProgressQuery],
     'Failed to load progress entries.',
   )
+  const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
   const trainerHasNoRoster = isTrainer && members.length === 0
   const trainerHasNoEntries = isTrainer && entries.length === 0
   const getMemberSummary = (memberId) => members.find((member) => member.id === memberId) || null
@@ -149,10 +152,6 @@ export default function Progress() {
     const member = getMemberSummary(memberId)
     return member ? `${member.name} (${member.email})` : memberId
   }
-
-  useEffect(() => {
-    setPage(1)
-  }, [deferredSearchTerm, dietCategoryFilter, effectiveMemberId])
 
   useEffect(() => {
     if (isMember) return
@@ -170,7 +169,7 @@ export default function Progress() {
     if (page > totalPages) {
       setPage(totalPages)
     }
-  }, [page, progressData])
+  }, [page, progressData?.pagination?.totalPages])
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -210,7 +209,9 @@ export default function Progress() {
       setBmi('')
       setNotes('')
       setRecordedAt(toDateTimeLocalValue(new Date()))
-    } catch {} finally {
+    } catch (error) {
+      void error
+    } finally {
       setIsSubmitting(false)
     }
   }
@@ -219,7 +220,24 @@ export default function Progress() {
     if (!canDelete) return
     try {
       await deleteProgressMutation.mutateAsync(entryId)
-    } catch {}
+    } catch (error) {
+      void error
+    }
+  }
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value)
+    setPage(1)
+  }
+
+  const handleDietCategoryFilterChange = (nextFilter) => {
+    setDietCategoryFilter(nextFilter)
+    setPage(1)
+  }
+
+  const handleMemberChange = (nextMemberId) => {
+    setMemberUserId(nextMemberId)
+    setPage(1)
   }
 
   const handleCalculateBmi = () => {
@@ -325,7 +343,7 @@ export default function Progress() {
       )}
 
       {canCreate && !trainerHasNoRoster && (
-        <form onSubmit={handleCreate} noValidate aria-describedby={error || success ? ids.status : undefined} className="border border-[#2f2f2f] bg-[#111111] p-5">
+        <form onSubmit={handleCreate} noValidate aria-describedby={hasStatusMessage ? ids.status : undefined} className="border border-[#2f2f2f] bg-[#111111] p-5">
           <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Add Progress Entry</h2>
           {isTrainer && (
             <p className="mt-2 text-sm text-gray-300">
@@ -339,7 +357,7 @@ export default function Progress() {
               label="Member"
               members={members}
               selectedId={memberUserId}
-              onChange={setMemberUserId}
+              onChange={handleMemberChange}
               hint="Selecting a member also refreshes the progress history below."
               emptyMessage="No members are available for progress tracking right now."
             />
@@ -571,7 +589,7 @@ export default function Progress() {
                 id={ids.search}
                 type="text"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={handleSearchChange}
                 className="mt-2 w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-white outline-none focus:border-[#E21A2C]"
                 placeholder="Member name, recorder, or notes"
               />
@@ -596,7 +614,7 @@ export default function Progress() {
                 <button
                   key={filter}
                   type="button"
-                  onClick={() => setDietCategoryFilter(filter)}
+                  onClick={() => handleDietCategoryFilterChange(filter)}
                   aria-pressed={isActive}
                   className={`border px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
                     isActive

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 import DashboardLoadingState from '../components/DashboardLoadingState'
+import StatusBanner from '../components/StatusBanner'
 import StatusStack from '../components/StatusStack'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
@@ -55,6 +56,8 @@ function formatUserAgent(userAgent) {
   if (!userAgent) return 'User agent unavailable'
   return userAgent.length > 140 ? `${userAgent.slice(0, 137)}...` : userAgent
 }
+
+const EMPTY_SESSIONS = []
 
 function SessionCard({ session }) {
   return (
@@ -154,7 +157,7 @@ export default function Sessions() {
       }
     },
   })
-  const sessions = sessionsQuery.data?.sessions ?? []
+  const sessions = sessionsQuery.data?.sessions ?? EMPTY_SESSIONS
   const queryError = sessionsQuery.error
     ? getServerStateErrorMessage(sessionsQuery.error, 'Failed to load active sessions.')
     : ''
@@ -189,7 +192,9 @@ export default function Sessions() {
   const handleRevokeOthers = async () => {
     try {
       await revokeOthersMutation.mutateAsync()
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleRevokeAll = async () => {
@@ -197,7 +202,9 @@ export default function Sessions() {
       await revokeAllMutation.mutateAsync()
       await logout()
       navigate('/login', { replace: true })
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   if (sessionsQuery.isPending) {

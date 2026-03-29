@@ -67,6 +67,7 @@ function getFriendlyFlowError(error, stage) {
 
 const stepLabels = ['Profile', 'Package', 'Payment', 'Finish']
 const preferredDefaultPlanId = 'pro-quarterly'
+const EMPTY_MEMBERSHIP_PLANS = []
 
 function getPreferredPlan(plans, preferredPlanId) {
   return plans.find((plan) => plan.id === preferredPlanId) || plans[0] || null
@@ -100,7 +101,7 @@ export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const membershipPlansQuery = useMembershipPlansQuery()
-  const membershipPlans = membershipPlansQuery.data?.plans ?? []
+  const membershipPlans = membershipPlansQuery.data?.plans ?? EMPTY_MEMBERSHIP_PLANS
   const plansLoading = membershipPlansQuery.isPending
   const catalogError = membershipPlansQuery.error
     ? getServerStateErrorMessage(membershipPlansQuery.error, 'Failed to load membership packages.')

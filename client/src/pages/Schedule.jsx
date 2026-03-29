@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import DashboardLoadingState from '../components/DashboardLoadingState'
 import DashboardLayout from '../components/DashboardLayout'
 import StatusStack from '../components/StatusStack'
@@ -408,20 +408,8 @@ export default function Schedule() {
   const trainerAvailability = workspace.trainerAvailability
   const attendanceHistory = workspace.attendanceHistory
   const trainers = workspace.trainers
-
-  useEffect(() => {
-    if (!workspaceQuery.data) return
-
-    setForm((current) => {
-      if (isTrainer && user?.id && current.trainerId !== user.id) {
-        return { ...current, trainerId: user.id }
-      }
-      if (isAdmin && !current.trainerId && trainers[0]?.id) {
-        return { ...current, trainerId: trainers[0].id }
-      }
-      return current
-    })
-  }, [workspaceQuery.data, isAdmin, isTrainer, trainers, user?.id])
+  const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
+  const selectedTrainerId = isTrainer ? user?.id || '' : form.trainerId || trainers[0]?.id || ''
 
   const reservedSeats = useMemo(
     () => upcomingSessions.reduce((sum, session) => sum + Number(session.bookedCount || 0), 0),
@@ -499,25 +487,31 @@ export default function Schedule() {
         description: form.description.trim() || undefined,
         sessionType: form.sessionType,
         location: form.location.trim() || undefined,
-        trainerId: isAdmin ? form.trainerId || undefined : user?.id,
+        trainerId: isAdmin ? selectedTrainerId || undefined : user?.id,
         startsAt: new Date(form.startsAt).toISOString(),
         endsAt: new Date(form.endsAt).toISOString(),
         capacity: Number(form.capacity),
       })
       resetForm()
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleBookSession = async (sessionId) => {
     try {
       await bookSessionMutation.mutateAsync(sessionId)
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleUpdateBookingStatus = async (bookingId, status) => {
     try {
       await updateBookingMutation.mutateAsync({ bookingId, status })
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   if (loading) {
@@ -579,7 +573,7 @@ export default function Schedule() {
           <form
             onSubmit={handleCreateSession}
             noValidate
-            aria-describedby={error || success ? ids.status : undefined}
+            aria-describedby={hasStatusMessage ? ids.status : undefined}
             className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]"
           >
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">
@@ -626,7 +620,7 @@ export default function Schedule() {
                   <span className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Trainer</span>
                   <select
                     id={ids.trainerId}
-                    value={form.trainerId}
+                    value={selectedTrainerId}
                     onChange={(event) => setForm((current) => ({ ...current, trainerId: event.target.value }))}
                     className="w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
                   >
@@ -714,7 +708,7 @@ export default function Schedule() {
                   !form.startsAt ||
                   !form.endsAt ||
                   !form.capacity ||
-                  (isAdmin && !form.trainerId)
+                  (isAdmin && !selectedTrainerId)
               }
               className="mt-4 border border-[#E21A2C] bg-[#E21A2C] px-4 py-2 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:bg-[#c31626] disabled:cursor-not-allowed disabled:opacity-60"
             >

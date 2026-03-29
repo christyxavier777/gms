@@ -55,6 +55,7 @@ const memberStatusCopy = {
 }
 
 const adminFilters = ['ALL', 'PENDING', 'SUCCESS', 'FAILED']
+const EMPTY_PAYMENTS = []
 
 function formatAmount(value) {
   const amount = Number(value)
@@ -375,6 +376,7 @@ export default function Payments() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
+  const [isAmountDirty, setIsAmountDirty] = useState(false)
   const [form, setForm] = useState({
     amount: '',
     upiId: '',
@@ -422,7 +424,7 @@ export default function Payments() {
     getErrorMessage: 'Failed to update payment status.',
     invalidate: ({ queryClient }) => invalidatePaymentsQueries(queryClient),
   })
-  const payments = paymentsQuery.data?.payments ?? []
+  const payments = paymentsQuery.data?.payments ?? EMPTY_PAYMENTS
   const pagination = paymentsQuery.data?.pagination || {
     page,
     pageSize,
@@ -445,27 +447,20 @@ export default function Payments() {
     [paymentsQuery, subscriptionQuery],
     'Failed to load payments.',
   )
-
-  useEffect(() => {
-    if (!suggestedAmount) return
-    setForm((prev) => (prev.amount ? prev : { ...prev, amount: String(suggestedAmount) }))
-  }, [suggestedAmount])
-
-  useEffect(() => {
-    if (!isAdmin) return
-    setPage(1)
-  }, [deferredSearchTerm, isAdmin, statusFilter])
+  const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
+  const defaultAmount = suggestedAmount ? String(suggestedAmount) : ''
+  const paymentAmountValue = isAmountDirty ? form.amount : form.amount || defaultAmount
 
   useEffect(() => {
     const totalPages = paymentsQuery.data?.pagination?.totalPages ?? 1
     if (page > totalPages) {
       setPage(totalPages)
     }
-  }, [page, paymentsQuery.data])
+  }, [page, paymentsQuery.data?.pagination?.totalPages])
 
   const handleSubmitPayment = async (event) => {
     event.preventDefault()
-    const amount = Number(form.amount)
+    const amount = Number(paymentAmountValue)
     const trimmedProofReference = form.proofReference.trim()
 
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -493,11 +488,14 @@ export default function Payments() {
       })
       setForm((prev) => ({
         ...prev,
-        amount: suggestedAmount ? String(suggestedAmount) : '',
+        amount: '',
         upiId: '',
         proofReference: '',
       }))
-    } catch {}
+      setIsAmountDirty(false)
+    } catch (error) {
+      void error
+    }
   }
 
   const handleStatusChange = async (paymentId, status, verificationNotes = '') => {
@@ -511,28 +509,20 @@ export default function Payments() {
         ...current,
         [paymentId]: '',
       }))
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
-
-  const pendingPayments = useMemo(
-    () => summary.pending,
-    [summary.pending],
-  )
-  const successPayments = useMemo(
-    () => summary.success,
-    [summary.success],
-  )
-  const failedPayments = useMemo(
-    () => summary.failed,
-    [summary.failed],
-  )
+  const pendingPayments = summary.pending
+  const successPayments = summary.success
+  const failedPayments = summary.failed
 
   const filteredPendingPayments = useMemo(
     () => payments.filter((payment) => payment.status === 'PENDING'),
     [payments],
   )
 
-  const totalAmountMinor = useMemo(() => summary.verifiedRevenueMinor || 0, [summary.verifiedRevenueMinor])
+  const totalAmountMinor = summary.verifiedRevenueMinor || 0
 
   const statusCounts = useMemo(
     () => ({
@@ -541,10 +531,26 @@ export default function Payments() {
       SUCCESS: summary.success,
       FAILED: summary.failed,
     }),
-    [summary],
+    [summary.failed, summary.pending, summary.success, summary.total],
   )
 
   const hasActiveAdminFilters = isAdmin && (statusFilter !== 'ALL' || deferredSearchTerm.length > 0)
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value)
+    setPage(1)
+  }
+
+  const handleStatusFilterChange = (nextStatus) => {
+    setStatusFilter(nextStatus)
+    setPage(1)
+  }
+
+  const clearAdminFilters = () => {
+    setStatusFilter('ALL')
+    setSearchTerm('')
+    setPage(1)
+  }
 
   if (loading) {
     return (
@@ -614,7 +620,7 @@ export default function Payments() {
                 id={ids.search}
                 type="text"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={handleSearchChange}
                 className="mt-2 w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
                 placeholder="Member name, email, transaction, UPI, or plan"
               />
@@ -631,10 +637,7 @@ export default function Payments() {
               {hasActiveAdminFilters && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setStatusFilter('ALL')
-                    setSearchTerm('')
-                  }}
+                  onClick={clearAdminFilters}
                   className="mt-3 border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-gray-200 transition hover:border-[#ff8b5f]/70 hover:text-white"
                 >
                   Clear Filters
@@ -650,7 +653,7 @@ export default function Payments() {
                 <button
                   key={filter}
                   type="button"
-                  onClick={() => setStatusFilter(filter)}
+                  onClick={() => handleStatusFilterChange(filter)}
                   aria-pressed={isActive}
                   className={`border px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
                     isActive
@@ -671,7 +674,7 @@ export default function Payments() {
           <form
             onSubmit={handleSubmitPayment}
             noValidate
-            aria-describedby={error || success ? ids.status : undefined}
+            aria-describedby={hasStatusMessage ? ids.status : undefined}
             className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]"
           >
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Submit UPI Payment</h2>
@@ -702,8 +705,11 @@ export default function Payments() {
                   type="number"
                   min="1"
                   step="0.01"
-                  value={form.amount}
-                  onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
+                  value={paymentAmountValue}
+                  onChange={(event) => {
+                    setIsAmountDirty(true)
+                    setForm((prev) => ({ ...prev, amount: event.target.value }))
+                  }}
                   className="mt-2 w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
                   placeholder="Enter payment amount"
                 />
@@ -740,7 +746,7 @@ export default function Payments() {
 
               <button
                 type="submit"
-                disabled={!form.amount || !form.upiId.trim() || actionStatus.actionKey === 'submit-payment'}
+                disabled={!paymentAmountValue || !form.upiId.trim() || actionStatus.actionKey === 'submit-payment'}
                 className="border border-[#E21A2C] bg-[#E21A2C] px-4 py-2 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:bg-[#f24c5c] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {actionStatus.actionKey === 'submit-payment' ? 'Submitting...' : 'Submit Payment'}

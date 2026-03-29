@@ -10,7 +10,7 @@ function shouldRetryRequest(failureCount, error) {
   return failureCount < 2
 }
 
-export const appQueryClient = new QueryClient({
+const appQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30 * 1000,

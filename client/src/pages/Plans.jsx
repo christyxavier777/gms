@@ -80,6 +80,7 @@ export default function Plans() {
     [workoutPlansQuery, dietPlansQuery, membersQuery],
     'Failed to load plans.',
   )
+  const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
 
   const hasLiveData = workoutPlans.length > 0 || dietPlans.length > 0
   const displayedWorkoutPlans = workoutPlans
@@ -105,7 +106,9 @@ export default function Plans() {
       })
       setWorkoutTitle('')
       setWorkoutDescription('')
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleCreateDiet = async (e) => {
@@ -117,7 +120,9 @@ export default function Plans() {
       })
       setDietTitle('')
       setDietDescription('')
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleAssignWorkout = async (planId) => {
@@ -128,7 +133,9 @@ export default function Plans() {
     }
     try {
       await assignWorkoutMutation.mutateAsync({ planId, memberId })
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleAssignDiet = async (planId) => {
@@ -139,7 +146,9 @@ export default function Plans() {
     }
     try {
       await assignDietMutation.mutateAsync({ planId, memberId })
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   if (loading) {
@@ -225,7 +234,7 @@ export default function Plans() {
           <form
             onSubmit={handleCreateWorkout}
             noValidate
-            aria-describedby={error || success ? ids.status : undefined}
+            aria-describedby={hasStatusMessage ? ids.status : undefined}
             className="border border-[#2f2f2f] bg-[#111111] p-5"
           >
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Create Workout Plan</h2>
@@ -270,7 +279,7 @@ export default function Plans() {
           <form
             onSubmit={handleCreateDiet}
             noValidate
-            aria-describedby={error || success ? ids.status : undefined}
+            aria-describedby={hasStatusMessage ? ids.status : undefined}
             className="border border-[#2f2f2f] bg-[#111111] p-5"
           >
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Create Diet Plan</h2>

@@ -78,6 +78,10 @@ function getCancellationAction(status) {
   return null
 }
 
+const EMPTY_MEMBERS = []
+const EMPTY_PLANS = []
+const EMPTY_SUBSCRIPTIONS = []
+
 export default function Subscriptions() {
   const baseId = useId()
   const { token, user } = useAuth()
@@ -93,9 +97,7 @@ export default function Subscriptions() {
   const [selectedPlanId, setSelectedPlanId] = useState('')
   const [form, setForm] = useState({
     userId: '',
-    planId: '',
     startDate: today,
-    endDate: '',
   })
   const ids = {
     status: `${baseId}-status`,
@@ -140,9 +142,9 @@ export default function Subscriptions() {
     getErrorMessage: 'Failed to cancel subscription.',
     invalidate: ({ queryClient }) => invalidateSubscriptionsQueries(queryClient),
   })
-  const membershipPlans = membershipPlansQuery.data?.plans ?? []
-  const members = membersQuery.data?.members ?? []
-  const subscriptions = subscriptionsQuery.data?.subscriptions ?? []
+  const membershipPlans = membershipPlansQuery.data?.plans ?? EMPTY_PLANS
+  const members = membersQuery.data?.members ?? EMPTY_MEMBERS
+  const subscriptions = subscriptionsQuery.data?.subscriptions ?? EMPTY_SUBSCRIPTIONS
   const pagination = subscriptionsQuery.data?.pagination || {
     page,
     pageSize,
@@ -168,67 +170,18 @@ export default function Subscriptions() {
     [membershipPlansQuery, membersQuery, subscriptionsQuery, mySubscriptionQuery],
     'Failed to load subscriptions.',
   )
-
-  const selectedPlan = getPreferredPlan(
-    membershipPlans,
-    selectedPlanId || location.state?.preselectedPlanId || location.state?.preselectedPlanKey || 'basic-monthly',
-  )
-
-  useEffect(() => {
-    if (!isAdmin) return
-    setPage(1)
-  }, [deferredSearchTerm, isAdmin, statusFilter])
+  const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
+  const preselectedPlanId = location.state?.preselectedPlanId || location.state?.preselectedPlanKey || 'basic-monthly'
+  const selectedPlan = getPreferredPlan(membershipPlans, selectedPlanId || preselectedPlanId)
+  const effectiveSelectedPlanId = selectedPlan?.id || ''
+  const calculatedEndDate = selectedPlan ? addDays(form.startDate, selectedPlan.durationDays) : ''
 
   useEffect(() => {
-    const preferredPlanId =
-      location.state?.preselectedPlanId ||
-      location.state?.preselectedPlanKey ||
-      selectedPlanId ||
-      'basic-monthly'
-    const nextSelectedPlan = getPreferredPlan(membershipPlans, preferredPlanId)
-
-    if (!nextSelectedPlan) {
-      setSelectedPlanId('')
-      setForm((prev) => {
-        if (!prev.planId && !prev.endDate) return prev
-        return { ...prev, planId: '', endDate: '' }
-      })
-      return
-    }
-
-    setSelectedPlanId((current) => {
-      if (current && membershipPlans.some((plan) => plan.id === current)) {
-        return current
-      }
-      return nextSelectedPlan.id
-    })
-    setForm((prev) => {
-      const activePlanId =
-        prev.planId && membershipPlans.some((plan) => plan.id === prev.planId)
-          ? prev.planId
-          : nextSelectedPlan.id
-      const activePlan = membershipPlans.find((plan) => plan.id === activePlanId) || nextSelectedPlan
-      const nextEndDate = activePlan ? addDays(prev.startDate, activePlan.durationDays) : ''
-
-      if (prev.planId === activePlanId && prev.endDate === nextEndDate) {
-        return prev
-      }
-
-      return {
-        ...prev,
-        planId: activePlanId,
-        endDate: nextEndDate,
-      }
-    })
-  }, [location.state, membershipPlans, selectedPlanId])
-
-  useEffect(() => {
-    if (!isAdmin) return
     const totalPages = subscriptionsQuery.data?.pagination?.totalPages ?? 1
     if (page > totalPages) {
       setPage(totalPages)
     }
-  }, [isAdmin, page, subscriptionsQuery.data])
+  }, [page, subscriptionsQuery.data?.pagination?.totalPages])
 
   const hasLiveAdminData = summary.total > 0
   const displaySubscriptions = subscriptions
@@ -243,47 +196,59 @@ export default function Subscriptions() {
   }
   const hasActiveAdminFilters = statusFilter !== 'ALL' || deferredSearchTerm.length > 0
 
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value)
+    setPage(1)
+  }
+
+  const handleStatusFilterChange = (nextFilter) => {
+    setStatusFilter(nextFilter)
+    setPage(1)
+  }
+
+  const clearAdminFilters = () => {
+    setStatusFilter('ALL')
+    setSearchTerm('')
+    setPage(1)
+  }
+
   const handleCreate = async (e) => {
     e.preventDefault()
     if (!form.userId) {
       actionStatus.showError('Select a member before creating a subscription.')
       return
     }
-    if (!form.planId) {
+    if (!selectedPlan) {
       actionStatus.showError('Choose a membership plan before creating a subscription.')
       return
     }
     try {
       await createSubscriptionMutation.mutateAsync({
         userId: form.userId,
-        planId: form.planId,
+        planId: selectedPlan.id,
         startDate: form.startDate,
       })
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleCancel = async (subscriptionId) => {
     try {
       await cancelSubscriptionMutation.mutateAsync(subscriptionId)
-    } catch {}
+    } catch (error) {
+      void error
+    }
   }
 
   const handleSelectPlan = (planId) => {
-    const plan = membershipPlans.find((item) => item.id === planId)
-    if (!plan) return
     setSelectedPlanId(planId)
-    setForm((prev) => ({
-      ...prev,
-      planId: plan.id,
-      endDate: addDays(prev.startDate, plan.durationDays),
-    }))
   }
 
   const handleStartDateChange = (nextDate) => {
     setForm((prev) => ({
       ...prev,
       startDate: nextDate,
-      endDate: selectedPlan ? addDays(nextDate, selectedPlan.durationDays) : prev.endDate,
     }))
   }
 
@@ -337,7 +302,7 @@ export default function Subscriptions() {
             </article>
           </section>
 
-          <form onSubmit={handleCreate} noValidate aria-describedby={error || success ? ids.status : undefined} className="border border-[#2f2f2f] bg-[#111111] p-5">
+          <form onSubmit={handleCreate} noValidate aria-describedby={hasStatusMessage ? ids.status : undefined} className="border border-[#2f2f2f] bg-[#111111] p-5">
             <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Create Subscription</h2>
             {location.state?.onboardingName && (
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.08em] text-[#ff7a45]">
@@ -352,9 +317,9 @@ export default function Subscriptions() {
                   type="button"
                   onClick={() => handleSelectPlan(plan.id)}
                   role="radio"
-                  aria-checked={selectedPlanId === plan.id}
+                  aria-checked={effectiveSelectedPlanId === plan.id}
                   className={`border p-3 text-left transition-colors ${
-                    selectedPlanId === plan.id
+                    effectiveSelectedPlanId === plan.id
                       ? 'border-[#E21A2C] bg-[#1A1A1A]'
                       : 'border-[#2f2f2f] bg-[#141414] hover:border-[#E21A2C]/60'
                   }`}
@@ -412,7 +377,7 @@ export default function Subscriptions() {
                 <input
                   id={ids.endDate}
                   type="date"
-                  value={form.endDate}
+                  value={calculatedEndDate}
                   readOnly
                   aria-describedby={ids.endDateHint}
                   className="w-full border border-[#333333] bg-[#121212] px-3 py-2 text-white outline-none"
@@ -424,7 +389,7 @@ export default function Subscriptions() {
             </p>
             <button
               type="submit"
-              disabled={!form.userId || !form.planId || !form.startDate || !form.endDate}
+              disabled={!form.userId || !selectedPlan || !form.startDate || !calculatedEndDate}
               className="mt-4 border border-[#E21A2C] bg-[#E21A2C] px-4 py-2 text-sm font-bold uppercase tracking-[0.08em] text-white disabled:opacity-50"
             >
               Create Subscription
@@ -451,7 +416,7 @@ export default function Subscriptions() {
                   id={ids.search}
                   type="text"
                   value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
+                  onChange={handleSearchChange}
                   className="mt-2 w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-white outline-none focus:border-[#E21A2C]"
                   placeholder="Member name, email, phone, or plan"
                 />
@@ -468,10 +433,7 @@ export default function Subscriptions() {
                 {hasActiveAdminFilters && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setStatusFilter('ALL')
-                      setSearchTerm('')
-                    }}
+                    onClick={clearAdminFilters}
                     className="mt-3 border border-[#333333] bg-[#141414] px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-gray-200 transition hover:border-[#E21A2C]/70 hover:text-white"
                   >
                     Clear Filters
@@ -489,7 +451,7 @@ export default function Subscriptions() {
                   <button
                     key={filter}
                     type="button"
-                    onClick={() => setStatusFilter(filter)}
+                    onClick={() => handleStatusFilterChange(filter)}
                     aria-pressed={isActive}
                     className={`border px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
                       isActive
