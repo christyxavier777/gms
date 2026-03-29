@@ -1,8 +1,15 @@
+%% Current ER diagram aligned to server/prisma/schema.prisma.
+%% Notes:
+%% - WEARABLE_WEBHOOK_AUDIT_EVENT.memberUserId is stored as an identifier, not a Prisma relation.
+%% - Composite uniques exist on TRAINER_MEMBER_ASSIGNMENT(trainerId, memberId)
+%%   and SCHEDULE_BOOKING(sessionId, memberId).
+
 erDiagram
   USER {
     string id PK
     string name
     string email UK
+    string phone UK
     string passwordHash
     string role
     string status
@@ -30,9 +37,22 @@ erDiagram
     datetime updatedAt
   }
 
+  MEMBERSHIP_PLAN {
+    string id PK
+    string name
+    int priceMinor
+    int durationDays
+    string perks
+    boolean active
+    int displayOrder
+    datetime createdAt
+    datetime updatedAt
+  }
+
   SUBSCRIPTION {
     string id PK
     string userId FK
+    string planId FK
     string planName
     datetime startDate
     datetime endDate
@@ -46,12 +66,95 @@ erDiagram
     string userId FK
     string recordedById FK
     float weight
+    float height
     float bodyFat
     float bmi
+    string dietCategory
     string notes
     datetime recordedAt
     datetime createdAt
     datetime updatedAt
+  }
+
+  SESSION {
+    string id PK
+    string userId FK
+    string tokenHash UK
+    string userAgent
+    string ipAddress
+    datetime expiresAt
+    datetime revokedAt
+    datetime createdAt
+  }
+
+  TRAINER_MEMBER_ASSIGNMENT {
+    string id PK
+    string trainerId FK
+    string memberId FK
+    boolean active
+    datetime createdAt
+  }
+
+  PAYMENT {
+    string id PK
+    string transactionId UK
+    string userId FK
+    string subscriptionId FK
+    int amountMinor
+    string upiId
+    string proofReference
+    string status
+    string reviewedById FK
+    datetime reviewedAt
+    string verificationNotes
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  PAYMENT_EVENT {
+    string id PK
+    string paymentId FK
+    string fromStatus
+    string toStatus
+    string changedById FK
+    string verificationNotes
+    datetime createdAt
+  }
+
+  SCHEDULE_SESSION {
+    string id PK
+    string title
+    string description
+    string sessionType
+    string location
+    string trainerId FK
+    string createdById FK
+    datetime startsAt
+    datetime endsAt
+    int capacity
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  SCHEDULE_BOOKING {
+    string id PK
+    string sessionId FK
+    string memberId FK
+    string status
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  WEARABLE_WEBHOOK_AUDIT_EVENT {
+    string id PK
+    string provider
+    string status
+    string requestId
+    string eventId
+    string memberUserId
+    string errorCode
+    string message
+    datetime createdAt
   }
 
   USER ||--o{ WORKOUT_PLAN : creates
@@ -59,5 +162,18 @@ erDiagram
   USER ||--o{ DIET_PLAN : creates
   USER ||--o{ DIET_PLAN : assigned
   USER ||--o{ SUBSCRIPTION : owns
-  USER ||--o{ PROGRESS : member_progress
+  MEMBERSHIP_PLAN ||--o{ SUBSCRIPTION : defines
+  USER ||--o{ PROGRESS : has_entries
   USER ||--o{ PROGRESS : recorded_by
+  USER ||--o{ SESSION : has_auth_sessions
+  USER ||--o{ TRAINER_MEMBER_ASSIGNMENT : trainer_links
+  USER ||--o{ TRAINER_MEMBER_ASSIGNMENT : member_links
+  USER ||--o{ PAYMENT : submits
+  SUBSCRIPTION ||--o{ PAYMENT : covers
+  USER ||--o{ PAYMENT : reviews
+  PAYMENT ||--o{ PAYMENT_EVENT : has_history
+  USER ||--o{ PAYMENT_EVENT : changed_by
+  USER ||--o{ SCHEDULE_SESSION : creates
+  USER ||--o{ SCHEDULE_SESSION : leads
+  SCHEDULE_SESSION ||--o{ SCHEDULE_BOOKING : has_bookings
+  USER ||--o{ SCHEDULE_BOOKING : books

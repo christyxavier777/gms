@@ -15,11 +15,25 @@ function buildQueryString(params = {}) {
 
 async function request(path, options = {}) {
   const { headers = {}, ...rest } = options
-  const response = await fetch(`${API_URL}${path}`, {
-    credentials: 'include',
-    headers,
-    ...rest,
-  })
+  let response
+
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      credentials: 'include',
+      headers,
+      ...rest,
+    })
+  } catch (cause) {
+    const target = API_URL || 'the API server'
+    const message = import.meta.env.DEV
+      ? `Could not reach ${target}. Make sure the backend is running and try again.`
+      : 'Could not reach the server. Check your connection and try again.'
+    const error = new Error(message)
+    error.code = 'NETWORK_ERROR'
+    error.cause = cause
+    throw error
+  }
+
   const data = await response.json().catch(() => ({}))
 
   if (!response.ok) {

@@ -1,0 +1,170 @@
+%% Simplified Chen-style ER diagram for report/presentation use.
+%% This is intentionally cleaner than ERD.mmd and focuses on the main domain entities.
+
+flowchart LR
+  classDef entity fill:#fff8ec,stroke:#6f5330,stroke-width:1.6px,color:#2f2418;
+  classDef relation fill:#ffffff,stroke:#4f4f4f,stroke-width:1.4px,color:#222;
+  classDef attr fill:#ffffff,stroke:#8c8c8c,stroke-width:1px,color:#333;
+
+  U[User]
+  MP[Membership Plan]
+  SUB[Subscription]
+  PAY[Payment]
+  PROG[Progress]
+  WP[Workout Plan]
+  DP[Diet Plan]
+  SS[Schedule Session]
+  SB[Schedule Booking]
+
+  uid(("userId (PK)"))
+  uname(("name"))
+  uemail(("email"))
+  uphone(("phone"))
+  urole(("role"))
+  ustatus(("status"))
+
+  mpid(("planId (PK)"))
+  mpname(("name"))
+  mpprice(("priceMinor"))
+  mpduration(("durationDays"))
+  mpactive(("active"))
+
+  sid(("subscriptionId (PK)"))
+  splan(("planName"))
+  sstart(("startDate"))
+  send(("endDate"))
+  sstatus(("status"))
+
+  payid(("paymentId (PK)"))
+  txid(("transactionId"))
+  amount(("amountMinor"))
+  upi(("upiId"))
+  paystatus(("status"))
+
+  prid(("progressId (PK)"))
+  pweight(("weight"))
+  pheight(("height"))
+  pbmi(("bmi"))
+  pbodyfat(("bodyFat"))
+  prec(("recordedAt"))
+
+  wpid(("workoutPlanId (PK)"))
+  wptitle(("title"))
+  wpdesc(("description"))
+
+  dpid(("dietPlanId (PK)"))
+  dptitle(("title"))
+  dpdesc(("description"))
+
+  ssid(("scheduleSessionId (PK)"))
+  sstitle(("title"))
+  sstype(("sessionType"))
+  ssstart(("startsAt"))
+  ssend(("endsAt"))
+
+  sbid(("bookingId (PK)"))
+  sbstatus(("status"))
+  sbcreated(("createdAt"))
+
+  owns{Owns}
+  defines{Defines}
+  makes{Makes}
+  covers{Covers}
+  tracks{Tracks}
+  createsWorkout{Creates}
+  assignedWorkout{Assigned}
+  createsDiet{Creates}
+  assignedDiet{Assigned}
+  leads{Leads}
+  hasBookings{Has}
+  books{Books}
+
+  uid --- U
+  uname --- U
+  uemail --- U
+  uphone --- U
+  urole --- U
+  ustatus --- U
+
+  mpid --- MP
+  mpname --- MP
+  mpprice --- MP
+  mpduration --- MP
+  mpactive --- MP
+
+  sid --- SUB
+  splan --- SUB
+  sstart --- SUB
+  send --- SUB
+  sstatus --- SUB
+
+  payid --- PAY
+  txid --- PAY
+  amount --- PAY
+  upi --- PAY
+  paystatus --- PAY
+
+  prid --- PROG
+  pweight --- PROG
+  pheight --- PROG
+  pbmi --- PROG
+  pbodyfat --- PROG
+  prec --- PROG
+
+  wpid --- WP
+  wptitle --- WP
+  wpdesc --- WP
+
+  dpid --- DP
+  dptitle --- DP
+  dpdesc --- DP
+
+  ssid --- SS
+  sstitle --- SS
+  sstype --- SS
+  ssstart --- SS
+  ssend --- SS
+
+  sbid --- SB
+  sbstatus --- SB
+  sbcreated --- SB
+
+  U --- owns
+  owns --- SUB
+
+  MP --- defines
+  defines --- SUB
+
+  U --- makes
+  makes --- PAY
+
+  SUB --- covers
+  covers --- PAY
+
+  U --- tracks
+  tracks --- PROG
+
+  U --- createsWorkout
+  createsWorkout --- WP
+
+  U --- assignedWorkout
+  assignedWorkout --- WP
+
+  U --- createsDiet
+  createsDiet --- DP
+
+  U --- assignedDiet
+  assignedDiet --- DP
+
+  U --- leads
+  leads --- SS
+
+  SS --- hasBookings
+  hasBookings --- SB
+
+  U --- books
+  books --- SB
+
+  class U,MP,SUB,PAY,PROG,WP,DP,SS,SB entity;
+  class owns,defines,makes,covers,tracks,createsWorkout,assignedWorkout,createsDiet,assignedDiet,leads,hasBookings,books relation;
+  class uid,uname,uemail,uphone,urole,ustatus,mpid,mpname,mpprice,mpduration,mpactive,sid,splan,sstart,send,sstatus,payid,txid,amount,upi,paystatus,prid,pweight,pheight,pbmi,pbodyfat,prec,wpid,wptitle,wpdesc,dpid,dptitle,dpdesc,ssid,sstitle,sstype,ssstart,ssend,sbid,sbstatus,sbcreated attr;

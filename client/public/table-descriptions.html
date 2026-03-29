@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GMS Table Descriptions</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #161a21;
+        --panel-2: #1c212b;
+        --line: #2a3140;
+        --line-soft: #222834;
+        --text: #eef2f7;
+        --muted: #aab4c5;
+        --accent: #f4d58d;
+        --accent-2: #9ad1d4;
+        --code: #141922;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(244, 213, 141, 0.08), transparent 30%),
+          radial-gradient(circle at top right, rgba(154, 209, 212, 0.08), transparent 28%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 40px 24px 72px;
+      }
+
+      .hero {
+        padding: 28px 28px 24px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+        border-radius: 24px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(2rem, 3.6vw, 3.25rem);
+        line-height: 1.05;
+      }
+
+      .hero p {
+        max-width: 900px;
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.65;
+      }
+
+      .hero code {
+        padding: 0.15rem 0.42rem;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+      }
+
+      .toc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0 0;
+      }
+
+      .toc a {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        font-size: 0.94rem;
+      }
+
+      .toc a:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .grid {
+        display: grid;
+        gap: 22px;
+        margin-top: 28px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 22px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .card-header h2 {
+        margin: 0;
+        font-size: 1.3rem;
+      }
+
+      .badge {
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: rgba(154, 209, 212, 0.1);
+        border: 1px solid rgba(154, 209, 212, 0.22);
+        color: var(--accent-2);
+        font-size: 0.84rem;
+        white-space: nowrap;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 980px;
+      }
+
+      thead th {
+        text-align: left;
+        padding: 16px 18px;
+        background: var(--panel-2);
+        color: #dfe6f2;
+        font-size: 0.95rem;
+      }
+
+      tbody td {
+        padding: 15px 18px;
+        border-top: 1px solid var(--line-soft);
+        vertical-align: top;
+        color: #e9edf5;
+      }
+
+      tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .col-name code,
+      .constraints code {
+        font-family: Consolas, "Courier New", monospace;
+        background: var(--code);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 0.15rem 0.42rem;
+        color: #f5d99f;
+      }
+
+      .type {
+        color: #d8deea;
+        white-space: nowrap;
+      }
+
+      .constraints {
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .description {
+        color: #e7ecf6;
+        line-height: 1.6;
+      }
+
+      .footer-note {
+        margin-top: 26px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.7;
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          padding: 22px 14px 48px;
+        }
+
+        .hero,
+        .card {
+          border-radius: 18px;
+        }
+
+        .card-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Gym Management System</p>
+        <h1>Table Descriptions</h1>
+        <p>
+          This is the report-style data dictionary for the project. It presents the live schema in a
+          cleaner academic format, so implementation fields like <code>createdById</code> appear here
+          as <code>created_by_id</code>.
+        </p>
+        <nav class="toc" aria-label="Table sections">
+          <a href="#users">Users</a>
+          <a href="#membership-plans">Membership Plans</a>
+          <a href="#subscriptions">Subscriptions</a>
+          <a href="#payments">Payments</a>
+          <a href="#progress">Progress</a>
+          <a href="#workout-plans">Workout Plans</a>
+          <a href="#diet-plans">Diet Plans</a>
+        </nav>
+      </section>
+
+      <section class="grid">
+        <article class="card" id="users">
+          <header class="card-header">
+            <h2>1. Users Table</h2>
+            <span class="badge">Core Identity Table</span>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Column name</th>
+                  <th>Data Type</th>
+                  <th>Constraints</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="col-name"><code>id</code></td><td class="type">UUID (string)</td><td class="constraints">PRIMARY KEY, NOT NULL</td><td class="description">Unique user ID</td></tr>
+                <tr><td class="col-name"><code>name</code></td><td class="type">varchar</td><td class="constraints">NOT NULL</td><td class="description">Full name of the user</td></tr>
+                <tr><td class="col-name"><code>email</code></td><td class="type">varchar</td><td class="constraints">UNIQUE, NOT NULL</td><td class="description">User email address</td></tr>
+                <tr><td class="col-name"><code>phone</code></td><td class="type">varchar</td><td class="constraints">UNIQUE, NOT NULL</td><td class="description">User phone number</td></tr>
+                <tr><td class="col-name"><code>password_hash</code></td><td class="type">text</td><td class="constraints">NOT NULL</td><td class="description">Encrypted password value used for login</td></tr>
+                <tr><td class="col-name"><code>role</code></td><td class="type">enum</td><td class="constraints">NOT NULL, DEFAULT <code>MEMBER</code></td><td class="description">Role of the user: admin, trainer, or member</td></tr>
+                <tr><td class="col-name"><code>status</code></td><td class="type">enum</td><td class="constraints">NOT NULL, DEFAULT <code>ACTIVE</code></td><td class="description">Current account status</td></tr>
+                <tr><td class="col-name"><code>created_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, DEFAULT <code>CURRENT_TIMESTAMP</code></td><td class="description">Record creation time</td></tr>
+                <tr><td class="col-name"><code>updated_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, AUTO-UPDATED</td><td class="description">Last update time</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card" id="membership-plans">
+          <header class="card-header">
+            <h2>2. Membership_Plans Table</h2>
+            <span class="badge">Catalog Table</span>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Column name</th>
+                  <th>Data Type</th>
+                  <th>Constraints</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="col-name"><code>id</code></td><td class="type">varchar</td><td class="constraints">PRIMARY KEY, NOT NULL</td><td class="description">Unique membership plan ID</td></tr>
+                <tr><td class="col-name"><code>name</code></td><td class="type">varchar</td><td class="constraints">NOT NULL</td><td class="description">Membership plan name</td></tr>
+                <tr><td class="col-name"><code>price_minor</code></td><td class="type">integer</td><td class="constraints">NOT NULL</td><td class="description">Membership price stored in minor units</td></tr>
+                <tr><td class="col-name"><code>duration_days</code></td><td class="type">integer</td><td class="constraints">NOT NULL</td><td class="description">Duration of the plan in days</td></tr>
+                <tr><td class="col-name"><code>perks</code></td><td class="type">text</td><td class="constraints">NOT NULL</td><td class="description">Benefits included in the plan</td></tr>
+                <tr><td class="col-name"><code>active</code></td><td class="type">boolean</td><td class="constraints">NOT NULL, DEFAULT <code>true</code></td><td class="description">Whether the plan is currently available</td></tr>
+                <tr><td class="col-name"><code>display_order</code></td><td class="type">integer</td><td class="constraints">NOT NULL, DEFAULT <code>100</code></td><td class="description">Display order used in the plan catalog</td></tr>
+                <tr><td class="col-name"><code>created_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, DEFAULT <code>CURRENT_TIMESTAMP</code></td><td class="description">Record creation time</td></tr>
+                <tr><td class="col-name"><code>updated_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, AUTO-UPDATED</td><td class="description">Last update time</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card" id="subscriptions">
+          <header class="card-header">
+            <h2>3. Subscriptions Table</h2>
+            <span class="badge">Membership Lifecycle</span>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Column name</th>
+                  <th>Data Type</th>
+                  <th>Constraints</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="col-name"><code>id</code></td><td class="type">UUID (string)</td><td class="constraints">PRIMARY KEY, NOT NULL</td><td class="description">Unique subscription ID</td></tr>
+                <tr><td class="col-name"><code>user_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NOT NULL</td><td class="description">Member who owns the subscription</td></tr>
+                <tr><td class="col-name"><code>plan_id</code></td><td class="type">varchar</td><td class="constraints">FOREIGN KEY -&gt; <code>membership_plans.id</code>, NOT NULL</td><td class="description">Membership plan linked to the subscription</td></tr>
+                <tr><td class="col-name"><code>plan_name</code></td><td class="type">varchar</td><td class="constraints">NOT NULL</td><td class="description">Stored plan name snapshot</td></tr>
+                <tr><td class="col-name"><code>start_date</code></td><td class="type">datetime</td><td class="constraints">NOT NULL</td><td class="description">Subscription start date</td></tr>
+                <tr><td class="col-name"><code>end_date</code></td><td class="type">datetime</td><td class="constraints">NOT NULL</td><td class="description">Subscription expiry date</td></tr>
+                <tr><td class="col-name"><code>status</code></td><td class="type">enum</td><td class="constraints">NOT NULL, DEFAULT <code>ACTIVE</code></td><td class="description">Current subscription lifecycle status</td></tr>
+                <tr><td class="col-name"><code>created_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, DEFAULT <code>CURRENT_TIMESTAMP</code></td><td class="description">Record creation time</td></tr>
+                <tr><td class="col-name"><code>updated_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, AUTO-UPDATED</td><td class="description">Last update time</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card" id="payments">
+          <header class="card-header">
+            <h2>4. Payments Table</h2>
+            <span class="badge">Billing Table</span>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Column name</th>
+                  <th>Data Type</th>
+                  <th>Constraints</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="col-name"><code>id</code></td><td class="type">UUID (string)</td><td class="constraints">PRIMARY KEY, NOT NULL</td><td class="description">Unique payment ID</td></tr>
+                <tr><td class="col-name"><code>transaction_id</code></td><td class="type">varchar</td><td class="constraints">UNIQUE, NOT NULL</td><td class="description">Unique transaction reference</td></tr>
+                <tr><td class="col-name"><code>user_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NOT NULL</td><td class="description">User who submitted the payment</td></tr>
+                <tr><td class="col-name"><code>subscription_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>subscriptions.id</code>, NULL</td><td class="description">Subscription related to the payment</td></tr>
+                <tr><td class="col-name"><code>amount_minor</code></td><td class="type">integer</td><td class="constraints">NOT NULL</td><td class="description">Payment amount in minor currency units</td></tr>
+                <tr><td class="col-name"><code>upi_id</code></td><td class="type">varchar</td><td class="constraints">NOT NULL</td><td class="description">UPI handle used for payment</td></tr>
+                <tr><td class="col-name"><code>proof_reference</code></td><td class="type">text</td><td class="constraints">NULL</td><td class="description">Optional payment proof reference</td></tr>
+                <tr><td class="col-name"><code>status</code></td><td class="type">enum</td><td class="constraints">NOT NULL, DEFAULT <code>PENDING</code></td><td class="description">Payment verification status</td></tr>
+                <tr><td class="col-name"><code>reviewed_by_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NULL</td><td class="description">Admin who reviewed the payment</td></tr>
+                <tr><td class="col-name"><code>reviewed_at</code></td><td class="type">datetime</td><td class="constraints">NULL</td><td class="description">Review timestamp</td></tr>
+                <tr><td class="col-name"><code>verification_notes</code></td><td class="type">text</td><td class="constraints">NULL</td><td class="description">Notes added during payment verification</td></tr>
+                <tr><td class="col-name"><code>created_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, DEFAULT <code>CURRENT_TIMESTAMP</code></td><td class="description">Record creation time</td></tr>
+                <tr><td class="col-name"><code>updated_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, AUTO-UPDATED</td><td class="description">Last update time</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card" id="progress">
+          <header class="card-header">
+            <h2>5. Progress Table</h2>
+            <span class="badge">Tracking Table</span>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Column name</th>
+                  <th>Data Type</th>
+                  <th>Constraints</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="col-name"><code>id</code></td><td class="type">UUID (string)</td><td class="constraints">PRIMARY KEY, NOT NULL</td><td class="description">Unique progress entry ID</td></tr>
+                <tr><td class="col-name"><code>user_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NOT NULL</td><td class="description">Member whose fitness progress is tracked</td></tr>
+                <tr><td class="col-name"><code>recorded_by_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NOT NULL</td><td class="description">Admin or trainer who recorded the entry</td></tr>
+                <tr><td class="col-name"><code>weight</code></td><td class="type">decimal</td><td class="constraints">NULL</td><td class="description">Recorded body weight</td></tr>
+                <tr><td class="col-name"><code>height</code></td><td class="type">decimal</td><td class="constraints">NULL</td><td class="description">Recorded height</td></tr>
+                <tr><td class="col-name"><code>body_fat</code></td><td class="type">decimal</td><td class="constraints">NULL</td><td class="description">Recorded body fat percentage</td></tr>
+                <tr><td class="col-name"><code>bmi</code></td><td class="type">decimal</td><td class="constraints">NULL</td><td class="description">Body mass index value</td></tr>
+                <tr><td class="col-name"><code>diet_category</code></td><td class="type">enum</td><td class="constraints">NULL</td><td class="description">Fitness or diet category derived from measurements</td></tr>
+                <tr><td class="col-name"><code>notes</code></td><td class="type">text</td><td class="constraints">NULL</td><td class="description">Additional progress remarks</td></tr>
+                <tr><td class="col-name"><code>recorded_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL</td><td class="description">Date and time of the recorded measurement</td></tr>
+                <tr><td class="col-name"><code>created_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, DEFAULT <code>CURRENT_TIMESTAMP</code></td><td class="description">Record creation time</td></tr>
+                <tr><td class="col-name"><code>updated_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, AUTO-UPDATED</td><td class="description">Last update time</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card" id="workout-plans">
+          <header class="card-header">
+            <h2>6. Workout_Plans Table</h2>
+            <span class="badge">Training Table</span>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Column name</th>
+                  <th>Data Type</th>
+                  <th>Constraints</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="col-name"><code>id</code></td><td class="type">UUID (string)</td><td class="constraints">PRIMARY KEY, NOT NULL</td><td class="description">Unique workout plan ID</td></tr>
+                <tr><td class="col-name"><code>title</code></td><td class="type">varchar</td><td class="constraints">NOT NULL</td><td class="description">Workout plan title</td></tr>
+                <tr><td class="col-name"><code>description</code></td><td class="type">text</td><td class="constraints">NOT NULL</td><td class="description">Workout details</td></tr>
+                <tr><td class="col-name"><code>created_by_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NOT NULL</td><td class="description">Admin/trainer who created plan</td></tr>
+                <tr><td class="col-name"><code>assigned_to_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NULL</td><td class="description">Member assigned to the plan</td></tr>
+                <tr><td class="col-name"><code>created_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, DEFAULT <code>CURRENT_TIMESTAMP</code></td><td class="description">Creation time</td></tr>
+                <tr><td class="col-name"><code>updated_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, AUTO-UPDATED</td><td class="description">Last update time</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card" id="diet-plans">
+          <header class="card-header">
+            <h2>7. Diet_Plans Table</h2>
+            <span class="badge">Nutrition Table</span>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Column name</th>
+                  <th>Data Type</th>
+                  <th>Constraints</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="col-name"><code>id</code></td><td class="type">UUID (string)</td><td class="constraints">PRIMARY KEY, NOT NULL</td><td class="description">Unique diet plan ID</td></tr>
+                <tr><td class="col-name"><code>title</code></td><td class="type">varchar</td><td class="constraints">NOT NULL</td><td class="description">Diet plan title</td></tr>
+                <tr><td class="col-name"><code>description</code></td><td class="type">text</td><td class="constraints">NOT NULL</td><td class="description">Diet plan details</td></tr>
+                <tr><td class="col-name"><code>created_by_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NOT NULL</td><td class="description">Admin/trainer who created plan</td></tr>
+                <tr><td class="col-name"><code>assigned_to_id</code></td><td class="type">UUID (string)</td><td class="constraints">FOREIGN KEY -&gt; <code>users.id</code>, NULL</td><td class="description">Member assigned to the diet plan</td></tr>
+                <tr><td class="col-name"><code>created_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, DEFAULT <code>CURRENT_TIMESTAMP</code></td><td class="description">Creation time</td></tr>
+                <tr><td class="col-name"><code>updated_at</code></td><td class="type">datetime</td><td class="constraints">NOT NULL, AUTO-UPDATED</td><td class="description">Last update time</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <p class="footer-note">
+        Open this page locally through the running frontend at
+        <strong><a href="/table-descriptions.html">/table-descriptions.html</a></strong>.
+      </p>
+    </main>
+  </body>
+</html>
