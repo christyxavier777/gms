@@ -1,8 +1,9 @@
 import { useId, useState } from 'react'
 
 function matchesMember(member, searchText) {
-  const haystack = `${member.name} ${member.email} ${member.phone}`.toLowerCase()
-  return haystack.includes(searchText.toLowerCase())
+  const normalizedSearch = searchText.trim().toLowerCase()
+  const haystack = [member.name, member.email, member.phone].filter(Boolean).join(' ').toLowerCase()
+  return haystack.includes(normalizedSearch)
 }
 
 export default function MemberSelector({
@@ -22,10 +23,19 @@ export default function MemberSelector({
   const hintId = `${baseId}-hint`
   const resultsId = `${baseId}-results`
   const summaryId = `${baseId}-summary`
-  const filteredMembers = search.trim()
-    ? members.filter((member) => matchesMember(member, search.trim()))
+  const normalizedSearch = search.trim()
+  const filteredMembers = normalizedSearch
+    ? members.filter((member) => matchesMember(member, normalizedSearch))
     : members
   const selectedMember = members.find((member) => member.id === selectedId) || null
+  const visibleMembers =
+    selectedMember && !filteredMembers.some((member) => member.id === selectedMember.id)
+      ? [selectedMember, ...filteredMembers]
+      : filteredMembers
+  const shouldKeepSelectionVisible =
+    Boolean(normalizedSearch) &&
+    Boolean(selectedMember) &&
+    !filteredMembers.some((member) => member.id === selectedMember?.id)
 
   return (
     <fieldset className={`space-y-3 ${className}`.trim()}>
@@ -59,12 +69,12 @@ export default function MemberSelector({
           id={selectId}
           value={selectedId}
           onChange={(event) => onChange(event.target.value)}
-          disabled={disabled || filteredMembers.length === 0}
+          disabled={disabled || visibleMembers.length === 0}
           aria-describedby={[resultsId, selectedMember ? summaryId : ''].filter(Boolean).join(' ') || undefined}
           className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-white outline-none transition-colors focus:border-[#E21A2C] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <option value="">Select member</option>
-          {filteredMembers.map((member) => (
+          {visibleMembers.map((member) => (
             <option key={member.id} value={member.id}>
               {member.name} ({member.email})
             </option>
@@ -72,9 +82,13 @@ export default function MemberSelector({
         </select>
       </div>
 
-      {filteredMembers.length === 0 ? (
+      {filteredMembers.length === 0 && !shouldKeepSelectionVisible ? (
         <p id={resultsId} className="text-sm text-gray-400" aria-live="polite">
           {emptyMessage}
+        </p>
+      ) : shouldKeepSelectionVisible ? (
+        <p id={resultsId} className="text-sm text-gray-400" aria-live="polite">
+          No new members match your search. The current selection is still available.
         </p>
       ) : (
         <p id={resultsId} className="text-xs font-semibold uppercase tracking-[0.08em] text-[#ff8b5f]" aria-live="polite">

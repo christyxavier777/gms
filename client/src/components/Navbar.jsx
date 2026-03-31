@@ -13,6 +13,11 @@ export default function Navbar() {
     { to: '/register', label: 'Register' },
   ]
 
+  const handleLogout = async () => {
+    await logout()
+    navigate('/', { replace: true })
+  }
+
   return (
     <nav className="sticky top-0 z-50 border-b border-[#E21A2C]/30 bg-[#1A1A1A] py-3">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4">
@@ -59,7 +64,7 @@ export default function Navbar() {
               ))}
               <li>
                 <button
-                  onClick={() => { logout(); navigate('/login'); }}
+                  onClick={handleLogout}
                   className="border border-[#E21A2C] bg-[#1A1A1A] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#E21A2C]"
                 >
                   Logout

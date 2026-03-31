@@ -201,7 +201,7 @@ export default function Sessions() {
     try {
       await revokeAllMutation.mutateAsync()
       await logout()
-      navigate('/login', { replace: true })
+      navigate('/', { replace: true })
     } catch (error) {
       void error
     }

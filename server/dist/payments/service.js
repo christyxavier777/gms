@@ -643,6 +643,8 @@ async function listPayments(requester, query) {
         ? {
             OR: [
                 { transactionId: { contains: search, mode: "insensitive" } },
+                { razorpayOrderId: { contains: search, mode: "insensitive" } },
+                { razorpayPaymentId: { contains: search, mode: "insensitive" } },
                 { upiId: { contains: search, mode: "insensitive" } },
                 { proofReference: { contains: search, mode: "insensitive" } },
                 { verificationNotes: { contains: search, mode: "insensitive" } },

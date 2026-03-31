@@ -734,7 +734,7 @@ export default function Payments() {
             <div>
               <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Admin Review Board</h2>
               <p className="text-sm text-gray-300">
-                Search members, transaction IDs, plans, or UPI handles and narrow the ledger to the queue you need.
+                Search members, transaction IDs, Razorpay IDs, plans, or UPI handles and narrow the ledger to the queue you need.
               </p>
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#ff8b5f]">
@@ -751,7 +751,7 @@ export default function Payments() {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="mt-2 w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
-                placeholder="Member name, email, transaction, UPI, or plan"
+                placeholder="Member name, email, transaction, Razorpay ID, UPI, or plan"
               />
             </label>
 
