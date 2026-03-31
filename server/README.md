@@ -81,6 +81,9 @@ server/
 | `COOKIE_SECURE` | No | `false` locally, `true` recommended in production | Whether auth session cookies require HTTPS |
 | `COOKIE_SAME_SITE` | No | `lax` | Cookie SameSite mode (`lax`, `strict`, `none`) |
 | `COOKIE_DOMAIN` | No | - | Optional shared cookie domain for deployed environments |
+| `RAZORPAY_KEY_ID` | No | - | Razorpay key id used to create checkout orders |
+| `RAZORPAY_KEY_SECRET` | No | - | Razorpay key secret used for order creation and payment verification |
+| `RAZORPAY_WEBHOOK_SECRET` | No | - | Reserved for Razorpay webhook verification |
 | `ADMIN_NAME` | No | - | Seed admin display name (`seed:admin` only) |
 | `ADMIN_EMAIL` | No | - | Seed admin email address (`seed:admin` only) |
 | `ADMIN_PASSWORD` | No | - | Seed admin password (`seed:admin` only) |

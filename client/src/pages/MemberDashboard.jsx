@@ -13,6 +13,13 @@ function formatDate(date) {
   }
 }
 
+function formatStatusLabel(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+}
+
 export default function MemberDashboard() {
   const { user, token } = useAuth()
   const dashboardQuery = useMemberDashboardQuery(token, 8)
@@ -41,12 +48,15 @@ export default function MemberDashboard() {
   const workoutPlans = workoutLive
   const dietPlans = dietLive
   const progressEntries = progressLive
+  const subscriptionStatusLabel = subscriptionSummary?.status
+    ? formatStatusLabel(subscriptionSummary.status)
+    : 'None'
 
   const metrics = [
     { label: 'Assigned Workout Plans', value: workoutPlans.length, hint: 'Current training blocks' },
     { label: 'Assigned Diet Plans', value: dietPlans.length, hint: 'Nutrition protocols' },
     { label: 'Recent Progress Entries', value: progressEntries.length, hint: 'Logged performance' },
-    { label: 'Subscription Status', value: subscriptionSummary?.status ?? 'NONE', hint: 'Membership lifecycle' },
+    { label: 'Subscription Status', value: subscriptionStatusLabel, hint: 'Membership lifecycle' },
   ]
 
   const reminders = [
@@ -73,9 +83,9 @@ export default function MemberDashboard() {
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((item) => (
-          <article key={item.label} className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
+          <article key={item.label} className="min-w-0 border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]">
             <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">{item.label}</p>
-            <p className="mt-2 text-3xl font-black text-white">{item.value}</p>
+            <p className="mt-2 break-words text-3xl font-black leading-tight text-white">{item.value}</p>
             <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#ff8b5f]">{item.hint}</p>
           </article>
         ))}
@@ -149,7 +159,7 @@ export default function MemberDashboard() {
               </p>
               <p className="mt-1 text-lg font-black text-white">
                 {subscriptionSummary?.status === 'PENDING_ACTIVATION'
-                  ? 'Waiting for payment approval'
+                  ? 'Waiting for payment completion'
                   : subscriptionSummary?.endDate
                     ? formatDate(subscriptionSummary.endDate)
                     : '-'}
@@ -159,7 +169,7 @@ export default function MemberDashboard() {
               <div className="border border-white/10 bg-black/30 p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Lifecycle Status</p>
                 <p className="mt-1 text-lg font-black text-white">
-                  {String(subscriptionSummary.status).replace(/_/g, ' ')}
+                  {subscriptionStatusLabel}
                 </p>
               </div>
             )}

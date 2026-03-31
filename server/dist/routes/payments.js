@@ -24,6 +24,36 @@ exports.paymentsRouter.post("/payments/upi", require_auth_1.requireAuth, async (
         throw error;
     }
 });
+exports.paymentsRouter.post("/payments/razorpay/order", require_auth_1.requireAuth, async (req, res) => {
+    try {
+        if (!req.auth)
+            throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+        const payload = schemas_1.createRazorpayOrderSchema.parse(req.body);
+        const result = await (0, service_1.createRazorpayCheckoutOrder)(req.auth, payload);
+        res.status(201).json(result);
+    }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new http_error_1.HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());
+        }
+        throw error;
+    }
+});
+exports.paymentsRouter.post("/payments/razorpay/verify", require_auth_1.requireAuth, async (req, res) => {
+    try {
+        if (!req.auth)
+            throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+        const payload = schemas_1.verifyRazorpayPaymentSchema.parse(req.body);
+        const payment = await (0, service_1.verifyRazorpayCheckoutPayment)(req.auth, payload);
+        res.status(200).json({ payment });
+    }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new http_error_1.HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());
+        }
+        throw error;
+    }
+});
 exports.paymentsRouter.get("/payments", require_auth_1.requireAuth, async (req, res) => {
     try {
         if (!req.auth)

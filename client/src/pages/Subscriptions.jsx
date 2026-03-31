@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useId, useState } from 'react'
 import DashboardLoadingState from '../components/DashboardLoadingState'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 import MemberSelector from '../components/MemberSelector'
 import PaginationControls from '../components/PaginationControls'
@@ -86,6 +86,7 @@ export default function Subscriptions() {
   const baseId = useId()
   const { token, user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const isAdmin = user?.role === 'ADMIN'
   const isMember = user?.role === 'MEMBER'
   const actionStatus = useActionStatus()
@@ -243,6 +244,17 @@ export default function Subscriptions() {
 
   const handleSelectPlan = (planId) => {
     setSelectedPlanId(planId)
+  }
+
+  const handleOpenPaymentsForPlan = (plan) => {
+    navigate('/payments', {
+      state: {
+        preselectedPlanId: plan.id,
+        preselectedPlanName: plan.name,
+        preselectedPlanAmount: plan.priceInr,
+        preselectedPlanDurationDays: plan.durationDays,
+      },
+    })
   }
 
   const handleStartDateChange = (nextDate) => {
@@ -483,7 +495,7 @@ export default function Subscriptions() {
                   </p>
                   {sub.status === 'PENDING_ACTIVATION' && (
                     <p className="mt-2 text-xs uppercase tracking-[0.08em] text-yellow-300">
-                      Waiting for a successful payment review before activation begins.
+                      Waiting for payment submission to complete activation.
                     </p>
                   )}
                   {sub.status === 'CANCELLED_AT_PERIOD_END' && (
@@ -527,12 +539,19 @@ export default function Subscriptions() {
                 <p className="text-sm text-gray-300">No active plans are published in the catalog yet.</p>
               )}
               {membershipPlans.map((plan) => (
-                <div key={plan.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-3">
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => handleOpenPaymentsForPlan(plan)}
+                  className="w-full border border-[#2f2f2f] bg-[#1A1A1A] p-3 text-left transition-colors hover:border-[#E21A2C]/70 focus:border-[#E21A2C] focus:outline-none"
+                >
                   <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.name}</p>
-                  <p className="mt-1 text-lg font-black text-white">{formatAmount(plan.priceInr)}</p>
+                  <p className="mt-1 text-lg font-black text-white underline decoration-[#E21A2C]/35 underline-offset-4">
+                    {formatAmount(plan.priceInr)}
+                  </p>
                   <p className="text-sm text-gray-300">{plan.durationDays} days</p>
                   <p className="text-xs text-gray-400">{plan.perks}</p>
-                </div>
+                </button>
               ))}
             </div>
           </article>
@@ -555,7 +574,7 @@ export default function Subscriptions() {
                 </p>
                 {displayMySubscription.status === 'PENDING_ACTIVATION' && (
                   <p className="mt-2 text-xs uppercase tracking-[0.08em] text-yellow-300">
-                    This membership activates after payment approval.
+                    This membership activates as soon as you complete payment.
                   </p>
                 )}
               </div>

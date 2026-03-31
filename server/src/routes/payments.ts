@@ -5,11 +5,20 @@ import { HttpError } from "../middleware/http-error";
 import { requireAuth } from "../middleware/require-auth";
 import {
   createPaymentSchema,
+  createRazorpayOrderSchema,
   listPaymentsQuerySchema,
   paymentIdParamSchema,
   updatePaymentStatusSchema,
+  verifyRazorpayPaymentSchema,
 } from "../payments/schemas";
-import { createPayment, getPaymentById, listPayments, updatePaymentStatus } from "../payments/service";
+import {
+  createPayment,
+  createRazorpayCheckoutOrder,
+  getPaymentById,
+  listPayments,
+  updatePaymentStatus,
+  verifyRazorpayCheckoutPayment,
+} from "../payments/service";
 
 export const paymentsRouter = Router();
 
@@ -19,6 +28,34 @@ paymentsRouter.post("/payments/upi", requireAuth, async (req, res) => {
     const payload = createPaymentSchema.parse(req.body);
     const payment = await createPayment(req.auth, payload);
     res.status(201).json({ payment });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());
+    }
+    throw error;
+  }
+});
+
+paymentsRouter.post("/payments/razorpay/order", requireAuth, async (req, res) => {
+  try {
+    if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+    const payload = createRazorpayOrderSchema.parse(req.body);
+    const result = await createRazorpayCheckoutOrder(req.auth, payload);
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());
+    }
+    throw error;
+  }
+});
+
+paymentsRouter.post("/payments/razorpay/verify", requireAuth, async (req, res) => {
+  try {
+    if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+    const payload = verifyRazorpayPaymentSchema.parse(req.body);
+    const payment = await verifyRazorpayCheckoutPayment(req.auth, payload);
+    res.status(200).json({ payment });
   } catch (error) {
     if (error instanceof ZodError) {
       throw new HttpError(400, "VALIDATION_ERROR", "Request payload is invalid", error.flatten());

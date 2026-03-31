@@ -183,6 +183,12 @@ export const api = {
       body: JSON.stringify({ memberId }),
     }),
 
+  deleteWorkoutPlan: (token, planId) =>
+    request(`/workout-plans/${planId}`, {
+      method: 'DELETE',
+      headers: authHeaders(token),
+    }),
+
   listDietPlans: (token) =>
     request('/diet-plans', {
       method: 'GET',
@@ -207,6 +213,12 @@ export const api = {
         ...authHeaders(token),
       },
       body: JSON.stringify({ memberId }),
+    }),
+
+  deleteDietPlan: (token, planId) =>
+    request(`/diet-plans/${planId}`, {
+      method: 'DELETE',
+      headers: authHeaders(token),
     }),
 
   listUsers: (token, params = {}) =>
@@ -289,6 +301,20 @@ export const api = {
 
   createUpiPayment: (token, payload) =>
     request('/payments/upi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+      body: JSON.stringify(payload),
+    }),
+
+  createRazorpayOrder: (token, payload) =>
+    request('/payments/razorpay/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+      body: JSON.stringify(payload),
+    }),
+
+  verifyRazorpayPayment: (token, payload) =>
+    request('/payments/razorpay/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
       body: JSON.stringify(payload),

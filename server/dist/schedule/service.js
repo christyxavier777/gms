@@ -8,6 +8,7 @@ const client_1 = require("@prisma/client");
 const client_2 = require("../prisma/client");
 const http_error_1 = require("../middleware/http-error");
 const prisma = (0, client_2.createPrismaClient)();
+const defaultScheduleCapacity = 12;
 const schedulePersonSelect = {
     id: true,
     name: true,
@@ -138,7 +139,7 @@ async function getScheduleBookingOrThrow(bookingId) {
 async function listScheduleWorkspace(requester) {
     const now = new Date();
     const upcomingWhere = {
-        startsAt: { gte: now },
+        endsAt: { gte: now },
         ...(requester.role === client_1.Role.TRAINER ? { trainerId: requester.userId } : {}),
     };
     const [upcomingRows, trainerRows] = await Promise.all([
@@ -234,6 +235,7 @@ async function createScheduleSession(requester, payload) {
         throw new http_error_1.HttpError(400, "TRAINER_REQUIRED", "Choose a trainer before creating a session");
     }
     await assertTrainerUser(trainerId);
+    const capacity = payload.capacity ?? defaultScheduleCapacity;
     const created = await prisma.scheduleSession.create({
         data: {
             title: payload.title.trim(),
@@ -244,7 +246,7 @@ async function createScheduleSession(requester, payload) {
             createdById: requester.userId,
             startsAt: payload.startsAt,
             endsAt: payload.endsAt,
-            capacity: payload.capacity,
+            capacity,
         },
         include: {
             trainer: {

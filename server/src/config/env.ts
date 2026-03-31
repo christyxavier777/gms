@@ -123,6 +123,11 @@ export const env = {
     trainer: readOptionalEnv("TRAINER_INVITE_CODE"),
     admin: readOptionalEnv("ADMIN_INVITE_CODE"),
   },
+  razorpay: {
+    keyId: readOptionalEnv("RAZORPAY_KEY_ID"),
+    keySecret: readOptionalEnv("RAZORPAY_KEY_SECRET"),
+    webhookSecret: readOptionalEnv("RAZORPAY_WEBHOOK_SECRET"),
+  },
 };
 
 if (Number.isNaN(env.port) || env.port <= 0) {

@@ -16,7 +16,13 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-[#E21A2C]/30 bg-[#1A1A1A] py-3">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4">
-        <h2 className="text-xl font-black uppercase tracking-[0.14em] text-white md:text-2xl">Gym Management</h2>
+        <Link
+          to="/"
+          aria-label="Go to landing page"
+          className="text-xl font-black uppercase tracking-[0.14em] text-white transition-colors hover:text-[#ff8b5f] focus:outline-none focus-visible:text-[#ff8b5f] md:text-2xl"
+        >
+          Gym Management
+        </Link>
         <ul className="flex flex-wrap items-center gap-4 md:gap-6">
           {loading ? (
             <li>

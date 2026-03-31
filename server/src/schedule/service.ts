@@ -20,6 +20,7 @@ import {
 } from "./types";
 
 const prisma = createPrismaClient();
+const defaultScheduleCapacity = 12;
 
 const schedulePersonSelect = {
   id: true,
@@ -194,7 +195,7 @@ export async function listScheduleWorkspace(requester: {
 }): Promise<ScheduleWorkspace> {
   const now = new Date();
   const upcomingWhere: Prisma.ScheduleSessionWhereInput = {
-    startsAt: { gte: now },
+    endsAt: { gte: now },
     ...(requester.role === Role.TRAINER ? { trainerId: requester.userId } : {}),
   };
 
@@ -293,7 +294,7 @@ export async function createScheduleSession(
     trainerId?: string | undefined;
     startsAt: Date;
     endsAt: Date;
-    capacity: number;
+    capacity?: number | undefined;
   },
 ): Promise<SafeScheduleSession> {
   if (requester.role !== Role.ADMIN && requester.role !== Role.TRAINER) {
@@ -322,6 +323,7 @@ export async function createScheduleSession(
   }
 
   await assertTrainerUser(trainerId);
+  const capacity = payload.capacity ?? defaultScheduleCapacity;
 
   const created = await prisma.scheduleSession.create({
     data: {
@@ -333,7 +335,7 @@ export async function createScheduleSession(
       createdById: requester.userId,
       startsAt: payload.startsAt,
       endsAt: payload.endsAt,
-      capacity: payload.capacity,
+      capacity,
     },
     include: {
       trainer: {

@@ -41,6 +41,15 @@ const schemas_2 = require("../schedule/schemas");
     }));
 });
 (0, node_test_1.default)("schedule session schema rejects blank optional text fields and unknown properties", () => {
+    const parsed = schemas_2.createScheduleSessionSchema.parse({
+        title: "Morning conditioning",
+        sessionType: "CLASS",
+        location: "   ",
+        startsAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        endsAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    });
+    strict_1.default.equal(parsed.location, undefined);
+    strict_1.default.equal(parsed.capacity, 12);
     strict_1.default.throws(() => schemas_2.createScheduleSessionSchema.parse({
         title: "Morning conditioning",
         description: "   ",

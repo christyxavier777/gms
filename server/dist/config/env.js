@@ -102,6 +102,11 @@ exports.env = {
         trainer: readOptionalEnv("TRAINER_INVITE_CODE"),
         admin: readOptionalEnv("ADMIN_INVITE_CODE"),
     },
+    razorpay: {
+        keyId: readOptionalEnv("RAZORPAY_KEY_ID"),
+        keySecret: readOptionalEnv("RAZORPAY_KEY_SECRET"),
+        webhookSecret: readOptionalEnv("RAZORPAY_WEBHOOK_SECRET"),
+    },
 };
 if (Number.isNaN(exports.env.port) || exports.env.port <= 0) {
     throw new Error("Environment variable PORT must be a positive number.");

@@ -92,6 +92,14 @@ function formatBookingStatus(value) {
     .replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
+function hasSessionStarted(startsAt) {
+  return new Date(startsAt) <= new Date()
+}
+
+function hasSessionEnded(endsAt) {
+  return new Date(endsAt) <= new Date()
+}
+
 function isReservedBookingStatus(status) {
   return status !== 'CANCELLED'
 }
@@ -115,8 +123,11 @@ function updateScheduleWorkspaceCache(queryClient, updateWorkspace) {
 
 function SessionCard({ session, userRole, onBook, onUpdateBookingStatus, actionKey }) {
   const currentBooking = session.currentUserBooking
-  const memberCanBook = userRole === 'MEMBER' && (!currentBooking || currentBooking.status === 'CANCELLED')
-  const memberCanCancel = userRole === 'MEMBER' && currentBooking?.status === 'BOOKED'
+  const sessionStarted = hasSessionStarted(session.startsAt)
+  const sessionEnded = hasSessionEnded(session.endsAt)
+  const memberCanBook =
+    userRole === 'MEMBER' && !sessionStarted && (!currentBooking || currentBooking.status === 'CANCELLED')
+  const memberCanCancel = userRole === 'MEMBER' && !sessionStarted && currentBooking?.status === 'BOOKED'
   const memberBookingBusy = actionKey === `book:${session.id}`
 
   return (
@@ -194,6 +205,11 @@ function SessionCard({ session, userRole, onBook, onUpdateBookingStatus, actionK
               Full right now
             </span>
           )}
+          {userRole === 'MEMBER' && sessionStarted && !sessionEnded && (
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#ff8b5f]">
+              Session is in progress
+            </span>
+          )}
         </div>
       )}
 
@@ -231,19 +247,27 @@ function SessionCard({ session, userRole, onBook, onUpdateBookingStatus, actionK
                       <>
                         <button
                           type="button"
-                          disabled={actionKey === `booking:${attendee.bookingId}:ATTENDED`}
+                          disabled={!sessionStarted || actionKey === `booking:${attendee.bookingId}:ATTENDED`}
                           onClick={() => onUpdateBookingStatus(attendee.bookingId, 'ATTENDED')}
                           className="border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-200 transition hover:border-emerald-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {actionKey === `booking:${attendee.bookingId}:ATTENDED` ? 'Saving...' : 'Attended'}
+                          {actionKey === `booking:${attendee.bookingId}:ATTENDED`
+                            ? 'Saving...'
+                            : !sessionStarted
+                              ? 'Starts Soon'
+                              : 'Attended'}
                         </button>
                         <button
                           type="button"
-                          disabled={actionKey === `booking:${attendee.bookingId}:MISSED`}
+                          disabled={!sessionStarted || actionKey === `booking:${attendee.bookingId}:MISSED`}
                           onClick={() => onUpdateBookingStatus(attendee.bookingId, 'MISSED')}
                           className="border border-[#E21A2C]/40 bg-[#E21A2C]/10 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#ffd3d8] transition hover:border-[#ff8b5f] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {actionKey === `booking:${attendee.bookingId}:MISSED` ? 'Saving...' : 'Missed'}
+                          {actionKey === `booking:${attendee.bookingId}:MISSED`
+                            ? 'Saving...'
+                            : !sessionStarted
+                              ? 'Starts Soon'
+                              : 'Missed'}
                         </button>
                         <button
                           type="button"
@@ -257,6 +281,11 @@ function SessionCard({ session, userRole, onBook, onUpdateBookingStatus, actionK
                     )}
                   </div>
                 </div>
+                {attendee.status === 'BOOKED' && !sessionStarted && (
+                  <p className="mt-3 text-xs uppercase tracking-[0.08em] text-gray-400">
+                    Attendance can be marked once the session start time is reached.
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -380,7 +409,7 @@ export default function Schedule() {
     trainerId: '',
     startsAt: initialWindow.startsAt,
     endsAt: initialWindow.endsAt,
-    capacity: '12',
+    capacity: '',
   })
   const workspace = workspaceQuery.data?.workspace || {
     upcomingSessions: [],
@@ -473,7 +502,7 @@ export default function Schedule() {
       location: '',
       startsAt: nextWindow.startsAt,
       endsAt: nextWindow.endsAt,
-      capacity: '12',
+      capacity: '',
     }))
   }
 
@@ -490,7 +519,7 @@ export default function Schedule() {
         trainerId: isAdmin ? selectedTrainerId || undefined : user?.id,
         startsAt: new Date(form.startsAt).toISOString(),
         endsAt: new Date(form.endsAt).toISOString(),
-        capacity: Number(form.capacity),
+        ...(form.capacity.trim() ? { capacity: Number(form.capacity) } : {}),
       })
       resetForm()
     } catch (error) {
@@ -663,7 +692,9 @@ export default function Schedule() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Capacity</span>
+                <span className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">
+                  Capacity
+                </span>
                 <input
                   id={ids.capacity}
                   type="number"
@@ -672,19 +703,26 @@ export default function Schedule() {
                   value={form.capacity}
                   onChange={(event) => setForm((current) => ({ ...current, capacity: event.target.value }))}
                   className="w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
+                  placeholder="Defaults to 12"
                 />
+                <p className="mt-2 text-xs text-gray-400">
+                  Optional. Maximum number of members who can book this session. Defaults to 12 if left blank.
+                </p>
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Location</span>
+                <span className="mb-1 block text-xs font-bold uppercase tracking-[0.1em] text-gray-300">
+                  Location (Optional)
+                </span>
                 <input
                   id={ids.location}
                   type="text"
                   value={form.location}
                   onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
                   className="w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
-                  placeholder="Main floor, recovery zone, PT studio"
+                  placeholder="Optional: Main floor, recovery zone, PT studio"
                 />
+                <p className="mt-2 text-xs text-gray-400">Leave this blank if the room or area will be decided later.</p>
               </label>
 
               <label className="block md:col-span-2">
@@ -700,14 +738,13 @@ export default function Schedule() {
               </label>
             </fieldset>
 
-            <button
-              type="submit"
+              <button
+                type="submit"
                 disabled={
                   actionStatus.actionKey === 'create-session' ||
                   !form.title.trim() ||
                   !form.startsAt ||
                   !form.endsAt ||
-                  !form.capacity ||
                   (isAdmin && !selectedTrainerId)
               }
               className="mt-4 border border-[#E21A2C] bg-[#E21A2C] px-4 py-2 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:bg-[#c31626] disabled:cursor-not-allowed disabled:opacity-60"

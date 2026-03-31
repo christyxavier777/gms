@@ -69,6 +69,22 @@ export default function Plans() {
     getErrorMessage: 'Failed to assign diet plan.',
     invalidate: ({ queryClient }) => invalidatePlansQueries(queryClient),
   })
+  const deleteWorkoutMutation = useServerActionMutation({
+    actionStatus,
+    mutationFn: (planId) => api.deleteWorkoutPlan(token, planId),
+    getActionKey: (planId) => `delete-workout-${planId}`,
+    getSuccessMessage: 'Workout plan deleted.',
+    getErrorMessage: 'Failed to delete workout plan.',
+    invalidate: ({ queryClient }) => invalidatePlansQueries(queryClient),
+  })
+  const deleteDietMutation = useServerActionMutation({
+    actionStatus,
+    mutationFn: (planId) => api.deleteDietPlan(token, planId),
+    getActionKey: (planId) => `delete-diet-${planId}`,
+    getSuccessMessage: 'Diet plan deleted.',
+    getErrorMessage: 'Failed to delete diet plan.',
+    invalidate: ({ queryClient }) => invalidatePlansQueries(queryClient),
+  })
   const workoutPlans = workoutPlansQuery.data?.plans ?? []
   const dietPlans = dietPlansQuery.data?.plans ?? []
   const members = membersQuery.data?.members ?? []
@@ -146,6 +162,40 @@ export default function Plans() {
     }
     try {
       await assignDietMutation.mutateAsync({ planId, memberId })
+    } catch (error) {
+      void error
+    }
+  }
+
+  const handleDeleteWorkout = async (plan) => {
+    if (!window.confirm(`Delete workout plan "${plan.title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await deleteWorkoutMutation.mutateAsync(plan.id)
+      setWorkoutAssign((prev) => {
+        const next = { ...prev }
+        delete next[plan.id]
+        return next
+      })
+    } catch (error) {
+      void error
+    }
+  }
+
+  const handleDeleteDiet = async (plan) => {
+    if (!window.confirm(`Delete diet plan "${plan.title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await deleteDietMutation.mutateAsync(plan.id)
+      setDietAssign((prev) => {
+        const next = { ...prev }
+        delete next[plan.id]
+        return next
+      })
     } catch (error) {
       void error
     }
@@ -336,7 +386,21 @@ export default function Plans() {
             )}
             {displayedWorkoutPlans.map((plan) => (
               <div key={plan.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-                <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
+                  {canCreate && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteWorkout(plan)}
+                      disabled={deleteWorkoutMutation.isPending}
+                      className="border border-red-400/60 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-red-200 transition-colors hover:border-red-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deleteWorkoutMutation.isPending && actionStatus.actionKey === `delete-workout-${plan.id}`
+                        ? 'Deleting...'
+                        : 'Delete'}
+                    </button>
+                  )}
+                </div>
                 <p className="mt-1 text-sm text-gray-300">{plan.description}</p>
                 <p className="mt-1 text-xs text-gray-400">Assigned To: {formatAssignedMember(plan.assignedToId)}</p>
                 {canAssign && (
@@ -375,7 +439,21 @@ export default function Plans() {
             )}
             {displayedDietPlans.map((plan) => (
               <div key={plan.id} className="border border-[#2f2f2f] bg-[#1A1A1A] p-4">
-                <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">{plan.title}</p>
+                  {canCreate && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDiet(plan)}
+                      disabled={deleteDietMutation.isPending}
+                      className="border border-red-400/60 px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-red-200 transition-colors hover:border-red-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deleteDietMutation.isPending && actionStatus.actionKey === `delete-diet-${plan.id}`
+                        ? 'Deleting...'
+                        : 'Delete'}
+                    </button>
+                  )}
+                </div>
                 <p className="mt-1 text-sm text-gray-300">{plan.description}</p>
                 <p className="mt-1 text-xs text-gray-400">Assigned To: {formatAssignedMember(plan.assignedToId)}</p>
                 {canAssign && (

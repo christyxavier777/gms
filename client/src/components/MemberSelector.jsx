@@ -85,21 +85,23 @@ export default function MemberSelector({
       {selectedMember && (
         <div
           id={summaryId}
-          className="grid gap-3 border border-white/10 bg-white/5 p-4 text-sm text-gray-300 sm:grid-cols-3"
+          className="space-y-4 border border-white/10 bg-white/5 p-4 text-sm text-gray-300"
           aria-live="polite"
         >
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Selected Member</p>
-            <p className="mt-1 font-semibold text-white">{selectedMember.name}</p>
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(140px,0.8fr)] sm:items-start">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Selected Member</p>
+              <p className="mt-1 font-semibold text-white">{selectedMember.name}</p>
+            </div>
+            <div className="min-w-0 sm:text-right">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Status</p>
+              <p className="mt-1 break-words text-white">{selectedMember.status}</p>
+            </div>
           </div>
-          <div>
+          <div className="min-w-0 border-t border-white/10 pt-4">
             <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Contact</p>
-            <p className="mt-1 text-white">{selectedMember.email}</p>
-            <p className="text-gray-300">{selectedMember.phone}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Status</p>
-            <p className="mt-1 text-white">{selectedMember.status}</p>
+            <p className="mt-1 break-all text-white">{selectedMember.email}</p>
+            <p className="mt-1 text-gray-300">{selectedMember.phone}</p>
           </div>
         </div>
       )}

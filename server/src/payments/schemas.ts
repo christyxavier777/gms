@@ -7,6 +7,7 @@ export const createPaymentSchema = z
   .object({
     userId: z.string().uuid("userId must be a valid UUID"),
     subscriptionId: z.string().uuid("subscriptionId must be a valid UUID").optional(),
+    planId: z.string().trim().min(1, "planId is required").optional(),
     amount: z.number().positive("amount must be positive").max(1000000, "amount exceeds allowed limit"),
     upiId: z.string().trim().regex(upiRegex, "upiId must be a valid UPI handle"),
     proofReference: z
@@ -15,6 +16,47 @@ export const createPaymentSchema = z
       .min(3, "proofReference must be at least 3 characters long")
       .max(500, "proofReference must be 500 characters or fewer")
       .optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.subscriptionId && value.planId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide either subscriptionId or planId, not both",
+        path: ["planId"],
+      });
+    }
+  });
+
+export const createRazorpayOrderSchema = z
+  .object({
+    subscriptionId: z.string().uuid("subscriptionId must be a valid UUID").optional(),
+    planId: z.string().optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!value.subscriptionId && !value.planId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide subscriptionId or planId",
+        path: ["planId"],
+      });
+    }
+    if (value.subscriptionId && value.planId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide either subscriptionId or planId, not both",
+        path: ["planId"],
+      });
+    }
+  });
+
+export const verifyRazorpayPaymentSchema = z
+  .object({
+    paymentId: z.string().uuid("paymentId must be a valid UUID"),
+    razorpayOrderId: z.string().min(1, "razorpayOrderId is required"),
+    razorpayPaymentId: z.string().min(1, "razorpayPaymentId is required"),
+    razorpaySignature: z.string().min(1, "razorpaySignature is required"),
   })
   .strict();
 

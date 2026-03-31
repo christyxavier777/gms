@@ -6,6 +6,10 @@ const zod_1 = require("zod");
 const maxScheduleTitleLength = 80;
 const maxScheduleDescriptionLength = 400;
 const maxScheduleLocationLength = 80;
+const defaultScheduleCapacity = 12;
+function emptyStringToUndefined(value) {
+    return typeof value === "string" && value.trim() === "" ? undefined : value;
+}
 exports.createScheduleSessionSchema = zod_1.z
     .object({
     title: zod_1.z
@@ -20,16 +24,15 @@ exports.createScheduleSessionSchema = zod_1.z
         .max(maxScheduleDescriptionLength, `description must be ${maxScheduleDescriptionLength} characters or fewer`)
         .optional(),
     sessionType: zod_1.z.nativeEnum(client_1.ScheduleSessionType),
-    location: zod_1.z
+    location: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z
         .string()
         .trim()
-        .min(1, "location cannot be empty")
         .max(maxScheduleLocationLength, `location must be ${maxScheduleLocationLength} characters or fewer`)
-        .optional(),
+        .optional()),
     trainerId: zod_1.z.string().uuid("trainerId must be a valid UUID").optional(),
     startsAt: zod_1.z.coerce.date(),
     endsAt: zod_1.z.coerce.date(),
-    capacity: zod_1.z.coerce.number().int().min(1).max(40),
+    capacity: zod_1.z.preprocess(emptyStringToUndefined, zod_1.z.coerce.number().int().min(1).max(40).optional().default(defaultScheduleCapacity)),
 })
     .strict()
     .superRefine((value, ctx) => {

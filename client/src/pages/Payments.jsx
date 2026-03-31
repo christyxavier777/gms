@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useId, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import DashboardLoadingState from '../components/DashboardLoadingState'
 import DashboardLayout from '../components/DashboardLayout'
 import PaginationControls from '../components/PaginationControls'
@@ -49,13 +50,36 @@ const adminStatusCopy = {
 }
 
 const memberStatusCopy = {
-  PENDING: 'Your payment has been submitted and is waiting for gym staff review.',
+  PENDING: 'Your payment has been recorded and is still being finalized.',
   SUCCESS: 'Your payment was verified successfully and accepted into the payment ledger.',
   FAILED: 'This payment was not accepted. Please submit a corrected payment to retry.',
 }
 
 const adminFilters = ['ALL', 'PENDING', 'SUCCESS', 'FAILED']
 const EMPTY_PAYMENTS = []
+
+function loadRazorpayCheckoutScript() {
+  if (window.Razorpay) {
+    return Promise.resolve(true)
+  }
+
+  return new Promise((resolve) => {
+    const existing = document.querySelector('script[data-razorpay-checkout="true"]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true), { once: true })
+      existing.addEventListener('error', () => resolve(false), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.async = true
+    script.dataset.razorpayCheckout = 'true'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
 
 function formatAmount(value) {
   const amount = Number(value)
@@ -120,13 +144,17 @@ function getPlanAmount(subscription) {
   return subscription?.plan?.priceInr ?? null
 }
 
-function getSubscriptionLinkCopy(subscription) {
+function getSubscriptionLinkCopy(subscription, selectedPlanName = '') {
   if (!subscription) {
+    if (selectedPlanName) {
+      return `This payment will create and activate the ${selectedPlanName} plan you selected from the subscription catalog.`
+    }
+
     return 'You can still submit a standalone payment record while your subscription is being set up.'
   }
 
   if (subscription.status === 'PENDING_ACTIVATION') {
-    return `This payment is linked to your ${subscription.planName} membership and can activate it once the admin approves the transfer.`
+    return `This payment is linked to your ${subscription.planName} membership and will activate it immediately after submission.`
   }
 
   if (subscription.status === 'CANCELLED_AT_PERIOD_END') {
@@ -369,6 +397,7 @@ function PaymentCard({
 export default function Payments() {
   const baseId = useId()
   const { token, user } = useAuth()
+  const location = useLocation()
   const isAdmin = user?.role === 'ADMIN'
   const isMember = user?.role === 'MEMBER'
   const actionStatus = useActionStatus()
@@ -402,11 +431,26 @@ export default function Payments() {
   }
   const paymentsQuery = usePaymentsQuery(token, paymentParams)
   const subscriptionQuery = useMySubscriptionQuery(token, { enabled: isMember })
+  const createRazorpayOrderMutation = useServerActionMutation({
+    actionStatus,
+    mutationFn: (payload) => api.createRazorpayOrder(token, payload),
+    getActionKey: () => 'create-razorpay-order',
+    getErrorMessage: 'Failed to start Razorpay checkout.',
+    clearSuccessOnMutate: false,
+  })
+  const verifyRazorpayPaymentMutation = useServerActionMutation({
+    actionStatus,
+    mutationFn: (payload) => api.verifyRazorpayPayment(token, payload),
+    getActionKey: () => 'verify-razorpay-payment',
+    getSuccessMessage: 'Payment completed via Razorpay and membership updated.',
+    getErrorMessage: 'Failed to verify the Razorpay payment.',
+    invalidate: ({ queryClient }) => invalidatePaymentsQueries(queryClient),
+  })
   const createPaymentMutation = useServerActionMutation({
     actionStatus,
     mutationFn: (payload) => api.createUpiPayment(token, payload),
     getActionKey: () => 'submit-payment',
-    getSuccessMessage: 'Payment submitted for verification.',
+    getSuccessMessage: isMember ? 'Payment recorded and membership updated.' : 'Payment submitted for verification.',
     getErrorMessage: 'Failed to submit payment.',
     invalidate: ({ queryClient }) => invalidatePaymentsQueries(queryClient),
   })
@@ -441,7 +485,21 @@ export default function Payments() {
     verifiedRevenueMinor: 0,
   }
   const subscription = subscriptionQuery.data?.subscription ?? null
-  const suggestedAmount = useMemo(() => getPlanAmount(subscription), [subscription])
+  const selectedPlanFromNavigation = location.state?.preselectedPlanName
+    ? {
+        id: location.state.preselectedPlanId || '',
+        name: location.state.preselectedPlanName,
+        amount: Number(location.state.preselectedPlanAmount),
+        durationDays: Number(location.state.preselectedPlanDurationDays),
+      }
+    : null
+  const suggestedAmount = useMemo(() => {
+    if (selectedPlanFromNavigation && Number.isFinite(selectedPlanFromNavigation.amount)) {
+      return selectedPlanFromNavigation.amount
+    }
+
+    return getPlanAmount(subscription)
+  }, [selectedPlanFromNavigation, subscription])
   const loading = paymentsQuery.isPending || (isMember && subscriptionQuery.isPending)
   const queryError = getCombinedServerStateError(
     [paymentsQuery, subscriptionQuery],
@@ -450,6 +508,10 @@ export default function Payments() {
   const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
   const defaultAmount = suggestedAmount ? String(suggestedAmount) : ''
   const paymentAmountValue = isAmountDirty ? form.amount : form.amount || defaultAmount
+  const pendingSubscriptionForCheckout = subscription?.status === 'PENDING_ACTIVATION' ? subscription : null
+  const selectedPlanForCheckout =
+    !pendingSubscriptionForCheckout && selectedPlanFromNavigation?.id ? selectedPlanFromNavigation : null
+  const canStartRazorpayCheckout = Boolean(pendingSubscriptionForCheckout || selectedPlanForCheckout)
 
   useEffect(() => {
     const totalPages = paymentsQuery.data?.pagination?.totalPages ?? 1
@@ -482,6 +544,9 @@ export default function Payments() {
       await createPaymentMutation.mutateAsync({
         userId: user.id,
         subscriptionId: subscription?.id,
+        ...(!subscription && selectedPlanFromNavigation?.id
+          ? { planId: selectedPlanFromNavigation.id }
+          : {}),
         amount,
         upiId: form.upiId.trim(),
         ...(trimmedProofReference ? { proofReference: trimmedProofReference } : {}),
@@ -493,6 +558,70 @@ export default function Payments() {
         proofReference: '',
       }))
       setIsAmountDirty(false)
+    } catch (error) {
+      void error
+    }
+  }
+
+  const handleStartRazorpayCheckout = async (event) => {
+    event.preventDefault()
+
+    if (!canStartRazorpayCheckout) {
+      actionStatus.showError('Choose a membership plan before starting Razorpay checkout.')
+      return
+    }
+
+    const checkoutScriptReady = await loadRazorpayCheckoutScript()
+    if (!checkoutScriptReady || !window.Razorpay) {
+      actionStatus.showError('Could not load Razorpay Checkout. Please try again.')
+      return
+    }
+
+    try {
+      const orderResult = await createRazorpayOrderMutation.mutateAsync({
+        ...(pendingSubscriptionForCheckout ? { subscriptionId: pendingSubscriptionForCheckout.id } : {}),
+        ...(selectedPlanForCheckout ? { planId: selectedPlanForCheckout.id } : {}),
+      })
+
+      const razorpay = new window.Razorpay({
+        key: orderResult.checkout.keyId,
+        amount: orderResult.checkout.amount,
+        currency: orderResult.checkout.currency,
+        name: orderResult.checkout.name,
+        description: orderResult.checkout.description,
+        order_id: orderResult.checkout.orderId,
+        prefill: orderResult.checkout.prefill,
+        theme: {
+          color: '#E21A2C',
+        },
+        handler: async (response) => {
+          try {
+            await verifyRazorpayPaymentMutation.mutateAsync({
+              paymentId: orderResult.payment.id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            })
+          } catch (error) {
+            void error
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            if (!verifyRazorpayPaymentMutation.isPending) {
+              actionStatus.showError('Razorpay checkout was closed before payment completion.')
+            }
+          },
+        },
+      })
+
+      razorpay.on('payment.failed', (response) => {
+        actionStatus.showError(
+          response?.error?.description || 'Razorpay payment failed. Please try again.',
+        )
+      })
+
+      razorpay.open()
     } catch (error) {
       void error
     }
@@ -672,84 +801,63 @@ export default function Payments() {
       {isMember && (
         <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
           <form
-            onSubmit={handleSubmitPayment}
+            onSubmit={handleStartRazorpayCheckout}
             noValidate
             aria-describedby={hasStatusMessage ? ids.status : undefined}
             className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]"
           >
-            <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Submit UPI Payment</h2>
+            <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Pay With Razorpay</h2>
             <p className="mt-2 text-sm text-gray-300">
-              Submit your UPI handle and amount. New payment records are created as pending until an admin verifies them.
+              Start a real Razorpay checkout for UPI or other enabled methods. Your membership updates only after Razorpay verification succeeds.
             </p>
 
             <div className="mt-4 space-y-3">
               <div className="border border-white/10 bg-black/30 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Linked Subscription</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Checkout Target</p>
                 <p className="mt-1 text-lg font-black text-white">
-                  {subscription?.planName || 'No current subscription linked'}
+                  {subscription?.planName || selectedPlanFromNavigation?.name || 'No current subscription linked'}
                 </p>
                 <p className="mt-1 text-sm text-gray-300">
-                  {getSubscriptionLinkCopy(subscription)}
+                  {getSubscriptionLinkCopy(subscription, selectedPlanFromNavigation?.name || '')}
                 </p>
                 {suggestedAmount && (
                   <p className="mt-2 text-xs font-semibold uppercase tracking-[0.08em] text-[#ff8b5f]">
                     Suggested amount: {formatAmount(suggestedAmount)}
                   </p>
                 )}
+                {!subscription && selectedPlanFromNavigation?.durationDays > 0 && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    Selected package duration: {selectedPlanFromNavigation.durationDays} days
+                  </p>
+                )}
               </div>
 
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-300">Amount</span>
-                <input
-                  id={ids.amount}
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={paymentAmountValue}
-                  onChange={(event) => {
-                    setIsAmountDirty(true)
-                    setForm((prev) => ({ ...prev, amount: event.target.value }))
-                  }}
-                  className="mt-2 w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
-                  placeholder="Enter payment amount"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-300">UPI Handle</span>
-                <input
-                  id={ids.upi}
-                  type="text"
-                  value={form.upiId}
-                  onChange={(event) => setForm((prev) => ({ ...prev, upiId: event.target.value }))}
-                  className="mt-2 w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
-                  placeholder="example@okaxis"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-gray-300">
-                  Proof Reference
-                </span>
-                <input
-                  id={ids.proof}
-                  type="text"
-                  value={form.proofReference}
-                  onChange={(event) => setForm((prev) => ({ ...prev, proofReference: event.target.value }))}
-                  className="mt-2 w-full border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[#ff8b5f]"
-                  placeholder="Optional image URL or attachment reference"
-                />
-                <p className="mt-2 text-xs text-gray-400">
-                  Optional. Paste a screenshot URL or your staff-issued attachment reference to speed up review.
+              <div className="border border-white/10 bg-black/30 p-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Amount</p>
+                <p className="mt-1 text-2xl font-black text-white">
+                  {suggestedAmount ? formatAmount(suggestedAmount) : 'Select a plan first'}
                 </p>
-              </label>
+                <p className="mt-2 text-xs text-gray-400">
+                  Razorpay Checkout will handle UPI app selection, payment authorization, and the final callback.
+                </p>
+              </div>
 
               <button
                 type="submit"
-                disabled={!paymentAmountValue || !form.upiId.trim() || actionStatus.actionKey === 'submit-payment'}
+                disabled={
+                  !canStartRazorpayCheckout ||
+                  actionStatus.actionKey === 'create-razorpay-order' ||
+                  actionStatus.actionKey === 'verify-razorpay-payment'
+                }
                 className="border border-[#E21A2C] bg-[#E21A2C] px-4 py-2 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:bg-[#f24c5c] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {actionStatus.actionKey === 'submit-payment' ? 'Submitting...' : 'Submit Payment'}
+                {actionStatus.actionKey === 'create-razorpay-order'
+                  ? 'Starting Checkout...'
+                  : actionStatus.actionKey === 'verify-razorpay-payment'
+                    ? 'Verifying Payment...'
+                    : suggestedAmount
+                      ? `Pay ${formatAmount(suggestedAmount)}`
+                      : 'Select A Plan First'}
               </button>
             </div>
           </form>

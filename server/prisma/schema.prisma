@@ -232,6 +232,9 @@ model Payment {
   transactionId     String        @unique
   userId            String
   subscriptionId    String?
+  razorpayOrderId   String?       @unique
+  razorpayPaymentId String?       @unique
+  razorpaySignature String?
   amountMinor       Int
   upiId             String
   proofReference    String?

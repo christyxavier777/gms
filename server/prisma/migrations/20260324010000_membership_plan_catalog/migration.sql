@@ -18,7 +18,7 @@ INSERT INTO "public"."MembershipPlan" ("id", "name", "priceMinor", "durationDays
 VALUES
     ('basic-monthly', 'Basic Monthly', 124900, 30, 'Gym floor access + starter plan', true, 10),
     ('pro-quarterly', 'Pro Quarterly', 349900, 90, 'Trainer check-ins + diet guidance', true, 20),
-    ('elite-annual', 'Elite Annual', 699900, 365, 'Priority coaching + premium tracking', true, 30);
+    ('elite-annual', 'Elite Annual', 899900, 365, 'Priority coaching + premium tracking', true, 30);
 
 -- Preserve old free-text plans by importing them as inactive legacy catalog rows.
 INSERT INTO "public"."MembershipPlan" ("id", "name", "priceMinor", "durationDays", "perks", "active", "displayOrder")

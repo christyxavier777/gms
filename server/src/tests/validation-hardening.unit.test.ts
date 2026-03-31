@@ -52,6 +52,17 @@ test("plan schemas reject oversized titles and descriptions", () => {
 });
 
 test("schedule session schema rejects blank optional text fields and unknown properties", () => {
+  const parsed = createScheduleSessionSchema.parse({
+    title: "Morning conditioning",
+    sessionType: "CLASS",
+    location: "   ",
+    startsAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    endsAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+  });
+
+  assert.equal(parsed.location, undefined);
+  assert.equal(parsed.capacity, 12);
+
   assert.throws(() =>
     createScheduleSessionSchema.parse({
       title: "Morning conditioning",

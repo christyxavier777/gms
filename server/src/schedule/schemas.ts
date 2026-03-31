@@ -4,6 +4,11 @@ import { z } from "zod";
 const maxScheduleTitleLength = 80;
 const maxScheduleDescriptionLength = 400;
 const maxScheduleLocationLength = 80;
+const defaultScheduleCapacity = 12;
+
+function emptyStringToUndefined(value: unknown) {
+  return typeof value === "string" && value.trim() === "" ? undefined : value;
+}
 
 export const createScheduleSessionSchema = z
   .object({
@@ -22,16 +27,21 @@ export const createScheduleSessionSchema = z
       )
       .optional(),
     sessionType: z.nativeEnum(ScheduleSessionType),
-    location: z
-      .string()
-      .trim()
-      .min(1, "location cannot be empty")
-      .max(maxScheduleLocationLength, `location must be ${maxScheduleLocationLength} characters or fewer`)
-      .optional(),
+    location: z.preprocess(
+      emptyStringToUndefined,
+      z
+        .string()
+        .trim()
+        .max(maxScheduleLocationLength, `location must be ${maxScheduleLocationLength} characters or fewer`)
+        .optional(),
+    ),
     trainerId: z.string().uuid("trainerId must be a valid UUID").optional(),
     startsAt: z.coerce.date(),
     endsAt: z.coerce.date(),
-    capacity: z.coerce.number().int().min(1).max(40),
+    capacity: z.preprocess(
+      emptyStringToUndefined,
+      z.coerce.number().int().min(1).max(40).optional().default(defaultScheduleCapacity),
+    ),
   })
   .strict()
   .superRefine((value, ctx) => {

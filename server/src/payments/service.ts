@@ -1,6 +1,8 @@
+import crypto from "node:crypto";
 import { PaymentStatus, Prisma, Role, SubscriptionStatus } from "@prisma/client";
 import { createPrismaClient } from "../prisma/client";
 import { HttpError } from "../middleware/http-error";
+import { env } from "../config/env";
 import { fromMinorUnits, generatePaymentTransactionId, toMinorUnits } from "./money";
 import { PaymentListSummary, SafePayment } from "./types";
 import { createPaginationMeta, SortOrder } from "../utils/list-response";
@@ -76,6 +78,104 @@ type PaymentSummaryGroup = {
   _sum: { amountMinor?: number | null } | null | undefined;
 };
 
+type RazorpayOrderResponse = {
+  id: string;
+  amount: number;
+  currency: string;
+  receipt: string;
+  status: string;
+};
+
+type RazorpayPaymentResponse = {
+  id: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+};
+
+function assertRazorpayConfigured(): void {
+  if (!env.razorpay.keyId || !env.razorpay.keySecret) {
+    throw new HttpError(
+      503,
+      "RAZORPAY_NOT_CONFIGURED",
+      "Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+    );
+  }
+}
+
+function createRazorpayBasicAuthHeader(): string {
+  return `Basic ${Buffer.from(`${env.razorpay.keyId}:${env.razorpay.keySecret}`).toString("base64")}`;
+}
+
+async function createRazorpayOrder(input: {
+  receipt: string;
+  amountMinor: number;
+  notes?: Record<string, string>;
+}): Promise<RazorpayOrderResponse> {
+  assertRazorpayConfigured();
+
+  const response = await fetch("https://api.razorpay.com/v1/orders", {
+    method: "POST",
+    headers: {
+      Authorization: createRazorpayBasicAuthHeader(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: input.amountMinor,
+      currency: "INR",
+      receipt: input.receipt,
+      payment_capture: 1,
+      notes: input.notes ?? {},
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.text();
+    throw new HttpError(
+      502,
+      "RAZORPAY_ORDER_CREATE_FAILED",
+      "Could not create the Razorpay order.",
+      payload,
+    );
+  }
+
+  return (await response.json()) as RazorpayOrderResponse;
+}
+
+async function getRazorpayPayment(razorpayPaymentId: string): Promise<RazorpayPaymentResponse> {
+  assertRazorpayConfigured();
+
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(razorpayPaymentId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: createRazorpayBasicAuthHeader(),
+    },
+  });
+
+  if (!response.ok) {
+    const payload = await response.text();
+    throw new HttpError(
+      502,
+      "RAZORPAY_PAYMENT_FETCH_FAILED",
+      "Could not fetch the Razorpay payment.",
+      payload,
+    );
+  }
+
+  return (await response.json()) as RazorpayPaymentResponse;
+}
+
+function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string): boolean {
+  assertRazorpayConfigured();
+  const expected = crypto
+    .createHmac("sha256", env.razorpay.keySecret)
+    .update(`${orderId}|${paymentId}`)
+    .digest("hex");
+
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
+
 function toSafePayment(payment: PaymentWithRelations): SafePayment {
   return {
     id: payment.id,
@@ -149,6 +249,7 @@ export async function createPayment(
   payload: {
     userId: string;
     subscriptionId?: string | undefined;
+    planId?: string | undefined;
     amount: number;
     upiId: string;
     proofReference?: string | undefined;
@@ -167,34 +268,165 @@ export async function createPayment(
     throw new HttpError(400, "INVALID_PAYMENT_USER", "Payments can only be recorded for members");
   }
 
-  if (payload.subscriptionId) {
-    const subscription = await prisma.subscription.findUnique({ where: { id: payload.subscriptionId } });
-    if (!subscription || subscription.userId !== payload.userId) {
-      throw new HttpError(400, "INVALID_SUBSCRIPTION", "Subscription is invalid for this member");
-    }
-  }
-
   const amountMinor = toMinorUnits(payload.amount);
   const proofReference = payload.proofReference?.trim() || null;
-  const payment = await prisma.payment.create({
-    data: {
-      transactionId: generatePaymentTransactionId(),
-      userId: payload.userId,
-      subscriptionId: payload.subscriptionId ?? null,
-      amountMinor,
-      upiId: payload.upiId,
-      proofReference,
-      status: PaymentStatus.PENDING,
-      events: {
-        create: {
-          fromStatus: null,
-          toStatus: PaymentStatus.PENDING,
-          changedById: requester.userId,
-          verificationNotes: null,
+  const isSelfServiceMemberPayment =
+    requester.role === Role.MEMBER && requester.userId === payload.userId;
+
+  const payment = await prisma.$transaction(async (tx) => {
+    let linkedSubscriptionId = payload.subscriptionId ?? null;
+    let activateLinkedSubscription = false;
+
+    if (payload.subscriptionId) {
+      const subscription = await tx.subscription.findUnique({
+        where: { id: payload.subscriptionId },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          plan: {
+            select: {
+              durationDays: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription || subscription.userId !== payload.userId) {
+        throw new HttpError(400, "INVALID_SUBSCRIPTION", "Subscription is invalid for this member");
+      }
+
+      activateLinkedSubscription =
+        isSelfServiceMemberPayment && subscription.status === SubscriptionStatus.PENDING_ACTIVATION;
+
+      linkedSubscriptionId = subscription.id;
+    }
+
+    if (!linkedSubscriptionId && payload.planId) {
+      const plan = await tx.membershipPlan.findUnique({
+        where: { id: payload.planId },
+        select: {
+          id: true,
+          name: true,
+          active: true,
+          durationDays: true,
+        },
+      });
+
+      if (!plan) {
+        throw new HttpError(400, "INVALID_PLAN_ID", "Selected plan is not available");
+      }
+
+      if (!plan.active) {
+        throw new HttpError(400, "PLAN_INACTIVE", "Selected plan is not currently available");
+      }
+
+      const nextPeriod = buildSubscriptionPeriod(plan.durationDays, new Date());
+      const overlapping = await tx.subscription.findFirst({
+        where: {
+          userId: payload.userId,
+          status: {
+            in: [
+              SubscriptionStatus.ACTIVE,
+              SubscriptionStatus.CANCELLED_AT_PERIOD_END,
+              SubscriptionStatus.PENDING_ACTIVATION,
+            ],
+          },
+          startDate: { lte: nextPeriod.endDate },
+          NOT: { endDate: { lt: nextPeriod.startDate } },
+        },
+        select: { id: true },
+      });
+
+      if (overlapping) {
+        throw new HttpError(
+          409,
+          "ACTIVE_SUBSCRIPTION_OVERLAP",
+          "An active subscription already exists in this period",
+        );
+      }
+
+      const createdSubscription = await tx.subscription.create({
+        data: {
+          userId: payload.userId,
+          planId: plan.id,
+          planName: plan.name,
+          startDate: nextPeriod.startDate,
+          endDate: nextPeriod.endDate,
+          status: isSelfServiceMemberPayment
+            ? SubscriptionStatus.ACTIVE
+            : SubscriptionStatus.PENDING_ACTIVATION,
+        },
+        select: { id: true },
+      });
+
+      linkedSubscriptionId = createdSubscription.id;
+    }
+
+    const initialStatus = isSelfServiceMemberPayment ? PaymentStatus.SUCCESS : PaymentStatus.PENDING;
+    const reviewTimestamp = isSelfServiceMemberPayment ? new Date() : null;
+
+    const createdPayment = await tx.payment.create({
+      data: {
+        transactionId: generatePaymentTransactionId(),
+        userId: payload.userId,
+        subscriptionId: linkedSubscriptionId,
+        amountMinor,
+        upiId: payload.upiId,
+        proofReference,
+        status: initialStatus,
+        reviewedAt: reviewTimestamp,
+        verificationNotes: isSelfServiceMemberPayment ? "Auto-verified member payment" : null,
+        events: {
+          create: {
+            fromStatus: null,
+            toStatus: initialStatus,
+            changedById: requester.userId,
+            verificationNotes: isSelfServiceMemberPayment ? "Auto-verified member payment" : null,
+          },
         },
       },
-    },
-    include: paymentDetailInclude,
+      include: paymentDetailInclude,
+    });
+
+    if (activateLinkedSubscription && linkedSubscriptionId) {
+      const linkedSubscription = await tx.subscription.findUnique({
+        where: { id: linkedSubscriptionId },
+        select: {
+          id: true,
+          status: true,
+          plan: {
+            select: {
+              durationDays: true,
+            },
+          },
+        },
+      });
+
+      if (linkedSubscription?.status === SubscriptionStatus.PENDING_ACTIVATION) {
+        const nextPeriod = buildSubscriptionPeriod(linkedSubscription.plan.durationDays, new Date());
+        await tx.subscription.update({
+          where: { id: linkedSubscription.id },
+          data: {
+            status: SubscriptionStatus.ACTIVE,
+            startDate: nextPeriod.startDate,
+            endDate: nextPeriod.endDate,
+          },
+          select: { id: true },
+        });
+      }
+    }
+
+    const refreshedPayment = await tx.payment.findUnique({
+      where: { id: createdPayment.id },
+      include: paymentDetailInclude,
+    });
+
+    if (!refreshedPayment) {
+      throw new HttpError(404, "PAYMENT_NOT_FOUND", "Payment not found");
+    }
+
+    return refreshedPayment;
   });
 
   if (
@@ -209,7 +441,347 @@ export async function createPayment(
     });
   }
 
+  if (isSelfServiceMemberPayment && payment.subscriptionId) {
+    await invalidateDashboardCache("subscription_activated_from_member_payment");
+  }
+
   return toSafePayment(payment);
+}
+
+export async function createRazorpayCheckoutOrder(
+  requester: { userId: string; role: Role; name?: string | null; email?: string | null; phone?: string | null },
+  payload: {
+    subscriptionId?: string | undefined;
+    planId?: string | undefined;
+  },
+): Promise<{
+  payment: SafePayment;
+  checkout: {
+    keyId: string;
+    orderId: string;
+    amount: number;
+    currency: "INR";
+    name: string;
+    description: string;
+    prefill: {
+      name: string;
+      email: string;
+      contact: string;
+    };
+  };
+}> {
+  if (requester.role !== Role.MEMBER) {
+    throw new HttpError(403, "RAZORPAY_CHECKOUT_FORBIDDEN", "Only members can start Razorpay checkout");
+  }
+
+  assertRazorpayConfigured();
+
+  const user = await prisma.user.findUnique({
+    where: { id: requester.userId },
+    select: { id: true, role: true, name: true, email: true, phone: true },
+  });
+
+  if (!user || user.role !== Role.MEMBER) {
+    throw new HttpError(400, "INVALID_PAYMENT_USER", "Payments can only be recorded for members");
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    let subscriptionId = payload.subscriptionId ?? null;
+    let planName = "";
+    let amountMinor = 0;
+
+    if (payload.subscriptionId) {
+      const subscription = await tx.subscription.findUnique({
+        where: { id: payload.subscriptionId },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          plan: {
+            select: {
+              name: true,
+              priceMinor: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription || subscription.userId !== requester.userId) {
+        throw new HttpError(400, "INVALID_SUBSCRIPTION", "Subscription is invalid for this member");
+      }
+
+      if (subscription.status !== SubscriptionStatus.PENDING_ACTIVATION) {
+        throw new HttpError(
+          409,
+          "SUBSCRIPTION_NOT_PAYABLE",
+          "Only pending-activation subscriptions can be paid through checkout.",
+        );
+      }
+
+      subscriptionId = subscription.id;
+      planName = subscription.plan.name;
+      amountMinor = subscription.plan.priceMinor;
+    } else if (payload.planId) {
+      const plan = await tx.membershipPlan.findUnique({
+        where: { id: payload.planId },
+        select: {
+          id: true,
+          name: true,
+          active: true,
+          priceMinor: true,
+          durationDays: true,
+        },
+      });
+
+      if (!plan) {
+        throw new HttpError(400, "INVALID_PLAN_ID", "Selected plan is not available");
+      }
+
+      if (!plan.active) {
+        throw new HttpError(400, "PLAN_INACTIVE", "Selected plan is not currently available");
+      }
+
+      const nextPeriod = buildSubscriptionPeriod(plan.durationDays, new Date());
+      const overlapping = await tx.subscription.findFirst({
+        where: {
+          userId: requester.userId,
+          status: {
+            in: [
+              SubscriptionStatus.ACTIVE,
+              SubscriptionStatus.CANCELLED_AT_PERIOD_END,
+              SubscriptionStatus.PENDING_ACTIVATION,
+            ],
+          },
+          startDate: { lte: nextPeriod.endDate },
+          NOT: { endDate: { lt: nextPeriod.startDate } },
+        },
+        select: { id: true },
+      });
+
+      if (overlapping) {
+        throw new HttpError(
+          409,
+          "ACTIVE_SUBSCRIPTION_OVERLAP",
+          "An active subscription already exists in this period",
+        );
+      }
+
+      const createdSubscription = await tx.subscription.create({
+        data: {
+          userId: requester.userId,
+          planId: plan.id,
+          planName: plan.name,
+          startDate: nextPeriod.startDate,
+          endDate: nextPeriod.endDate,
+          status: SubscriptionStatus.PENDING_ACTIVATION,
+        },
+        select: { id: true },
+      });
+
+      subscriptionId = createdSubscription.id;
+      planName = plan.name;
+      amountMinor = plan.priceMinor;
+    } else {
+      throw new HttpError(400, "RAZORPAY_PLAN_REQUIRED", "A plan or pending subscription is required.");
+    }
+
+    const transactionId = generatePaymentTransactionId();
+    const razorpayOrder = await createRazorpayOrder({
+      receipt: transactionId,
+      amountMinor,
+      notes: {
+        memberUserId: requester.userId,
+        subscriptionId: subscriptionId ?? "",
+        planName,
+      },
+    });
+
+    const payment = await tx.payment.create({
+      data: {
+        transactionId,
+        userId: requester.userId,
+        subscriptionId,
+        razorpayOrderId: razorpayOrder.id,
+        amountMinor,
+        upiId: "RAZORPAY_CHECKOUT",
+        status: PaymentStatus.PENDING,
+        verificationNotes: "Awaiting Razorpay checkout completion",
+        events: {
+          create: {
+            fromStatus: null,
+            toStatus: PaymentStatus.PENDING,
+            changedById: requester.userId,
+            verificationNotes: "Awaiting Razorpay checkout completion",
+          },
+        },
+      },
+      include: paymentDetailInclude,
+    });
+
+    return {
+      payment,
+      razorpayOrder,
+    };
+  });
+
+  return {
+    payment: toSafePayment(result.payment),
+    checkout: {
+      keyId: env.razorpay.keyId,
+      orderId: result.razorpayOrder.id,
+      amount: result.razorpayOrder.amount,
+      currency: "INR",
+      name: "Gym Management System",
+      description: result.payment.subscription?.plan.name || "Membership Payment",
+      prefill: {
+        name: user.name,
+        email: user.email,
+        contact: user.phone,
+      },
+    },
+  };
+}
+
+export async function verifyRazorpayCheckoutPayment(
+  requester: { userId: string; role: Role },
+  payload: {
+    paymentId: string;
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  },
+): Promise<SafePayment> {
+  if (requester.role !== Role.MEMBER) {
+    throw new HttpError(403, "RAZORPAY_VERIFY_FORBIDDEN", "Only members can verify Razorpay checkout payments");
+  }
+
+  assertRazorpayConfigured();
+
+  const payment = await prisma.payment.findUnique({
+    where: { id: payload.paymentId },
+    include: paymentDetailInclude,
+  });
+
+  if (!payment || payment.userId !== requester.userId) {
+    throw new HttpError(404, "PAYMENT_NOT_FOUND", "Payment not found");
+  }
+
+  if (!payment.razorpayOrderId) {
+    throw new HttpError(409, "RAZORPAY_ORDER_MISSING", "This payment is not linked to a Razorpay order");
+  }
+
+  if (payment.status === PaymentStatus.SUCCESS && payment.razorpayPaymentId === payload.razorpayPaymentId) {
+    return toSafePayment(payment);
+  }
+
+  if (payment.razorpayOrderId !== payload.razorpayOrderId) {
+    throw new HttpError(400, "RAZORPAY_ORDER_MISMATCH", "Razorpay order does not match this payment");
+  }
+
+  if (!verifyRazorpaySignature(payload.razorpayOrderId, payload.razorpayPaymentId, payload.razorpaySignature)) {
+    throw new HttpError(400, "RAZORPAY_SIGNATURE_INVALID", "Razorpay payment signature is invalid");
+  }
+
+  const razorpayPayment = await getRazorpayPayment(payload.razorpayPaymentId);
+  if (razorpayPayment.order_id !== payload.razorpayOrderId) {
+    throw new HttpError(400, "RAZORPAY_PAYMENT_MISMATCH", "Razorpay payment does not belong to the expected order");
+  }
+  if (razorpayPayment.amount !== payment.amountMinor || razorpayPayment.currency !== "INR") {
+    throw new HttpError(400, "RAZORPAY_PAYMENT_AMOUNT_MISMATCH", "Razorpay payment amount does not match");
+  }
+  if (!["authorized", "captured"].includes(razorpayPayment.status)) {
+    throw new HttpError(409, "RAZORPAY_PAYMENT_NOT_SETTLED", "Razorpay payment is not completed yet");
+  }
+
+  let activatedPendingSubscription = false;
+  const updated = await prisma.$transaction(async (tx) => {
+    const current = await tx.payment.findUnique({
+      where: { id: payload.paymentId },
+      select: { id: true, status: true, subscriptionId: true },
+    });
+
+    if (!current) {
+      throw new HttpError(404, "PAYMENT_NOT_FOUND", "Payment not found");
+    }
+
+    const reviewedAt = new Date();
+
+    await tx.payment.update({
+      where: { id: payload.paymentId },
+      data: {
+        status: PaymentStatus.SUCCESS,
+        reviewedAt,
+        verificationNotes: "Verified via Razorpay Checkout",
+        razorpayPaymentId: payload.razorpayPaymentId,
+        razorpaySignature: payload.razorpaySignature,
+      },
+      select: { id: true },
+    });
+
+    await tx.paymentEvent.create({
+      data: {
+        paymentId: payload.paymentId,
+        fromStatus: current.status,
+        toStatus: PaymentStatus.SUCCESS,
+        changedById: null,
+        verificationNotes: "Verified via Razorpay Checkout",
+      },
+    });
+
+    if (current.subscriptionId) {
+      const linkedSubscription = await tx.subscription.findUnique({
+        where: { id: current.subscriptionId },
+        select: {
+          id: true,
+          status: true,
+          plan: {
+            select: {
+              durationDays: true,
+            },
+          },
+        },
+      });
+
+      if (linkedSubscription?.status === SubscriptionStatus.PENDING_ACTIVATION) {
+        const nextPeriod = buildSubscriptionPeriod(linkedSubscription.plan.durationDays, reviewedAt);
+        await tx.subscription.update({
+          where: { id: linkedSubscription.id },
+          data: {
+            status: SubscriptionStatus.ACTIVE,
+            startDate: nextPeriod.startDate,
+            endDate: nextPeriod.endDate,
+          },
+          select: { id: true },
+        });
+        activatedPendingSubscription = true;
+      }
+    }
+
+    const refreshedPayment = await tx.payment.findUnique({
+      where: { id: payload.paymentId },
+      include: paymentDetailInclude,
+    });
+
+    if (!refreshedPayment) {
+      throw new HttpError(404, "PAYMENT_NOT_FOUND", "Payment not found");
+    }
+
+    return refreshedPayment;
+  });
+
+  if (updated.subscriptionId) {
+    recordOnboardingPaymentSubmitted({
+      memberUserId: requester.userId,
+      paymentId: updated.id,
+      subscriptionId: updated.subscriptionId,
+    });
+  }
+
+  if (activatedPendingSubscription) {
+    await invalidateDashboardCache("subscription_activated_from_razorpay_checkout");
+  }
+
+  return toSafePayment(updated);
 }
 
 function buildPaymentWhere(clauses: Prisma.PaymentWhereInput[]): Prisma.PaymentWhereInput {
