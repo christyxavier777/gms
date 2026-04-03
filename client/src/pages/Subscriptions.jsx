@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useId, useState } from 'react'
+import { useDeferredValue, useId, useState } from 'react'
 import DashboardLoadingState from '../components/DashboardLoadingState'
 import { useLocation, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
@@ -178,13 +178,6 @@ export default function Subscriptions() {
   const selectedPlan = getPreferredPlan(membershipPlans, selectedPlanId || preselectedPlanId)
   const effectiveSelectedPlanId = selectedPlan?.id || ''
   const calculatedEndDate = selectedPlan ? addDays(form.startDate, selectedPlan.durationDays) : ''
-
-  useEffect(() => {
-    const totalPages = subscriptionsQuery.data?.pagination?.totalPages ?? 1
-    if (page > totalPages) {
-      setPage(totalPages)
-    }
-  }, [page, subscriptionsQuery.data?.pagination?.totalPages])
 
   const hasLiveAdminData = summary.total > 0
   const displaySubscriptions = subscriptions

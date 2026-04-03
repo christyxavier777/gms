@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useId, useMemo, useState } from 'react'
+import { useDeferredValue, useId, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import DashboardLoadingState from '../components/DashboardLoadingState'
 import DashboardLayout from '../components/DashboardLayout'
@@ -445,18 +445,9 @@ export default function Payments() {
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
   const [showAllMemberPayments, setShowAllMemberPayments] = useState(false)
-  const [isAmountDirty, setIsAmountDirty] = useState(false)
-  const [form, setForm] = useState({
-    amount: '',
-    upiId: '',
-    proofReference: '',
-  })
   const ids = {
     status: `${baseId}-status`,
     search: `${baseId}-search`,
-    amount: `${baseId}-amount`,
-    upi: `${baseId}-upi`,
-    proof: `${baseId}-proof`,
   }
 
   const deferredSearchTerm = useDeferredValue(searchTerm.trim())
@@ -484,14 +475,6 @@ export default function Payments() {
     getActionKey: () => 'verify-razorpay-payment',
     getSuccessMessage: 'Payment completed via Razorpay and membership updated.',
     getErrorMessage: 'Failed to verify the Razorpay payment.',
-    invalidate: ({ queryClient }) => invalidatePaymentsQueries(queryClient),
-  })
-  const createPaymentMutation = useServerActionMutation({
-    actionStatus,
-    mutationFn: (payload) => api.createUpiPayment(token, payload),
-    getActionKey: () => 'submit-payment',
-    getSuccessMessage: isMember ? 'Payment recorded and membership updated.' : 'Payment submitted for verification.',
-    getErrorMessage: 'Failed to submit payment.',
     invalidate: ({ queryClient }) => invalidatePaymentsQueries(queryClient),
   })
   const updatePaymentMutation = useServerActionMutation({
@@ -525,14 +508,18 @@ export default function Payments() {
     verifiedRevenueMinor: 0,
   }
   const subscription = subscriptionQuery.data?.subscription ?? null
-  const selectedPlanFromNavigation = location.state?.preselectedPlanName
-    ? {
-        id: location.state.preselectedPlanId || '',
-        name: location.state.preselectedPlanName,
-        amount: Number(location.state.preselectedPlanAmount),
-        durationDays: Number(location.state.preselectedPlanDurationDays),
-      }
-    : null
+  const selectedPlanFromNavigation = useMemo(
+    () =>
+      location.state?.preselectedPlanName
+        ? {
+            id: location.state.preselectedPlanId || '',
+            name: location.state.preselectedPlanName,
+            amount: Number(location.state.preselectedPlanAmount),
+            durationDays: Number(location.state.preselectedPlanDurationDays),
+          }
+        : null,
+    [location.state],
+  )
   const suggestedAmount = useMemo(() => {
     if (selectedPlanFromNavigation && Number.isFinite(selectedPlanFromNavigation.amount)) {
       return selectedPlanFromNavigation.amount
@@ -546,62 +533,10 @@ export default function Payments() {
     'Failed to load payments.',
   )
   const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
-  const defaultAmount = suggestedAmount ? String(suggestedAmount) : ''
-  const paymentAmountValue = isAmountDirty ? form.amount : form.amount || defaultAmount
   const pendingSubscriptionForCheckout = subscription?.status === 'PENDING_ACTIVATION' ? subscription : null
   const selectedPlanForCheckout =
     !pendingSubscriptionForCheckout && selectedPlanFromNavigation?.id ? selectedPlanFromNavigation : null
   const canStartRazorpayCheckout = Boolean(pendingSubscriptionForCheckout || selectedPlanForCheckout)
-
-  useEffect(() => {
-    const totalPages = paymentsQuery.data?.pagination?.totalPages ?? 1
-    if (page > totalPages) {
-      setPage(totalPages)
-    }
-  }, [page, paymentsQuery.data?.pagination?.totalPages])
-
-  const handleSubmitPayment = async (event) => {
-    event.preventDefault()
-    const amount = Number(paymentAmountValue)
-    const trimmedProofReference = form.proofReference.trim()
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      actionStatus.showError('Enter a valid payment amount.')
-      return
-    }
-
-    if (trimmedProofReference && trimmedProofReference.length < 3) {
-      actionStatus.showError('If you add a proof reference, use at least 3 characters.')
-      return
-    }
-
-    if (trimmedProofReference.length > 500) {
-      actionStatus.showError('Proof reference must be 500 characters or fewer.')
-      return
-    }
-
-    try {
-      await createPaymentMutation.mutateAsync({
-        userId: user.id,
-        subscriptionId: subscription?.id,
-        ...(!subscription && selectedPlanFromNavigation?.id
-          ? { planId: selectedPlanFromNavigation.id }
-          : {}),
-        amount,
-        upiId: form.upiId.trim(),
-        ...(trimmedProofReference ? { proofReference: trimmedProofReference } : {}),
-      })
-      setForm((prev) => ({
-        ...prev,
-        amount: '',
-        upiId: '',
-        proofReference: '',
-      }))
-      setIsAmountDirty(false)
-    } catch (error) {
-      void error
-    }
-  }
 
   const handleStartRazorpayCheckout = async (event) => {
     event.preventDefault()
