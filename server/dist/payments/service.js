@@ -127,6 +127,8 @@ function toSafePayment(payment) {
         transactionId: payment.transactionId,
         userId: payment.userId,
         subscriptionId: payment.subscriptionId,
+        razorpayOrderId: payment.razorpayOrderId,
+        razorpayPaymentId: payment.razorpayPaymentId,
         amount: (0, money_1.fromMinorUnits)(payment.amountMinor),
         amountMinor: payment.amountMinor,
         upiId: payment.upiId,
@@ -185,6 +187,41 @@ function toSafePayment(payment) {
         })),
     };
 }
+async function resolveNextMemberSubscriptionPeriod(tx, userId, durationDays) {
+    const latestSubscription = await tx.subscription.findFirst({
+        where: {
+            userId,
+            status: {
+                in: [
+                    client_1.SubscriptionStatus.ACTIVE,
+                    client_1.SubscriptionStatus.CANCELLED_AT_PERIOD_END,
+                    client_1.SubscriptionStatus.PENDING_ACTIVATION,
+                ],
+            },
+        },
+        orderBy: [{ endDate: "desc" }, { createdAt: "desc" }],
+        select: {
+            endDate: true,
+        },
+    });
+    if (!latestSubscription) {
+        return (0, lifecycle_1.buildSubscriptionPeriod)(durationDays, new Date());
+    }
+    return (0, lifecycle_1.buildSubscriptionPeriod)(durationDays, (0, lifecycle_1.addUtcDays)(latestSubscription.endDate, 1));
+}
+function shouldActivatePendingSubscriptionNow(subscription, at = new Date()) {
+    return (subscription.status === client_1.SubscriptionStatus.PENDING_ACTIVATION &&
+        subscription.startDate <= (0, lifecycle_1.todayUtc)(at));
+}
+function getActivationPeriodForPendingSubscription(subscription, at = new Date()) {
+    if (subscription.startDate > (0, lifecycle_1.todayUtc)(at)) {
+        return {
+            startDate: subscription.startDate,
+            endDate: subscription.endDate,
+        };
+    }
+    return (0, lifecycle_1.buildSubscriptionPeriod)(subscription.plan.durationDays, at);
+}
 async function createPayment(requester, payload) {
     if (requester.role !== client_1.Role.ADMIN && requester.userId !== payload.userId) {
         throw new http_error_1.HttpError(403, "PAYMENT_CREATE_FORBIDDEN", "You are not allowed to create payments for this user");
@@ -236,25 +273,8 @@ async function createPayment(requester, payload) {
             if (!plan.active) {
                 throw new http_error_1.HttpError(400, "PLAN_INACTIVE", "Selected plan is not currently available");
             }
-            const nextPeriod = (0, lifecycle_1.buildSubscriptionPeriod)(plan.durationDays, new Date());
-            const overlapping = await tx.subscription.findFirst({
-                where: {
-                    userId: payload.userId,
-                    status: {
-                        in: [
-                            client_1.SubscriptionStatus.ACTIVE,
-                            client_1.SubscriptionStatus.CANCELLED_AT_PERIOD_END,
-                            client_1.SubscriptionStatus.PENDING_ACTIVATION,
-                        ],
-                    },
-                    startDate: { lte: nextPeriod.endDate },
-                    NOT: { endDate: { lt: nextPeriod.startDate } },
-                },
-                select: { id: true },
-            });
-            if (overlapping) {
-                throw new http_error_1.HttpError(409, "ACTIVE_SUBSCRIPTION_OVERLAP", "An active subscription already exists in this period");
-            }
+            const nextPeriod = await resolveNextMemberSubscriptionPeriod(tx, payload.userId, plan.durationDays);
+            const activateImmediately = isSelfServiceMemberPayment && nextPeriod.startDate <= (0, lifecycle_1.todayUtc)();
             const createdSubscription = await tx.subscription.create({
                 data: {
                     userId: payload.userId,
@@ -262,9 +282,7 @@ async function createPayment(requester, payload) {
                     planName: plan.name,
                     startDate: nextPeriod.startDate,
                     endDate: nextPeriod.endDate,
-                    status: isSelfServiceMemberPayment
-                        ? client_1.SubscriptionStatus.ACTIVE
-                        : client_1.SubscriptionStatus.PENDING_ACTIVATION,
+                    status: activateImmediately ? client_1.SubscriptionStatus.ACTIVE : client_1.SubscriptionStatus.PENDING_ACTIVATION,
                 },
                 select: { id: true },
             });
@@ -300,6 +318,8 @@ async function createPayment(requester, payload) {
                 select: {
                     id: true,
                     status: true,
+                    startDate: true,
+                    endDate: true,
                     plan: {
                         select: {
                             durationDays: true,
@@ -307,8 +327,8 @@ async function createPayment(requester, payload) {
                     },
                 },
             });
-            if (linkedSubscription?.status === client_1.SubscriptionStatus.PENDING_ACTIVATION) {
-                const nextPeriod = (0, lifecycle_1.buildSubscriptionPeriod)(linkedSubscription.plan.durationDays, new Date());
+            if (linkedSubscription && shouldActivatePendingSubscriptionNow(linkedSubscription)) {
+                const nextPeriod = getActivationPeriodForPendingSubscription(linkedSubscription, new Date());
                 await tx.subscription.update({
                     where: { id: linkedSubscription.id },
                     data: {
@@ -401,25 +421,7 @@ async function createRazorpayCheckoutOrder(requester, payload) {
             if (!plan.active) {
                 throw new http_error_1.HttpError(400, "PLAN_INACTIVE", "Selected plan is not currently available");
             }
-            const nextPeriod = (0, lifecycle_1.buildSubscriptionPeriod)(plan.durationDays, new Date());
-            const overlapping = await tx.subscription.findFirst({
-                where: {
-                    userId: requester.userId,
-                    status: {
-                        in: [
-                            client_1.SubscriptionStatus.ACTIVE,
-                            client_1.SubscriptionStatus.CANCELLED_AT_PERIOD_END,
-                            client_1.SubscriptionStatus.PENDING_ACTIVATION,
-                        ],
-                    },
-                    startDate: { lte: nextPeriod.endDate },
-                    NOT: { endDate: { lt: nextPeriod.startDate } },
-                },
-                select: { id: true },
-            });
-            if (overlapping) {
-                throw new http_error_1.HttpError(409, "ACTIVE_SUBSCRIPTION_OVERLAP", "An active subscription already exists in this period");
-            }
+            const nextPeriod = await resolveNextMemberSubscriptionPeriod(tx, requester.userId, plan.durationDays);
             const createdSubscription = await tx.subscription.create({
                 data: {
                     userId: requester.userId,
@@ -561,6 +563,8 @@ async function verifyRazorpayCheckoutPayment(requester, payload) {
                 select: {
                     id: true,
                     status: true,
+                    startDate: true,
+                    endDate: true,
                     plan: {
                         select: {
                             durationDays: true,
@@ -568,8 +572,8 @@ async function verifyRazorpayCheckoutPayment(requester, payload) {
                     },
                 },
             });
-            if (linkedSubscription?.status === client_1.SubscriptionStatus.PENDING_ACTIVATION) {
-                const nextPeriod = (0, lifecycle_1.buildSubscriptionPeriod)(linkedSubscription.plan.durationDays, reviewedAt);
+            if (linkedSubscription && shouldActivatePendingSubscriptionNow(linkedSubscription, reviewedAt)) {
+                const nextPeriod = getActivationPeriodForPendingSubscription(linkedSubscription, reviewedAt);
                 await tx.subscription.update({
                     where: { id: linkedSubscription.id },
                     data: {
@@ -786,6 +790,8 @@ async function updatePaymentStatus(requester, paymentId, input) {
                     select: {
                         id: true,
                         status: true,
+                        startDate: true,
+                        endDate: true,
                         plan: {
                             select: {
                                 durationDays: true,
@@ -793,8 +799,8 @@ async function updatePaymentStatus(requester, paymentId, input) {
                         },
                     },
                 });
-                if (linkedSubscription?.status === client_1.SubscriptionStatus.PENDING_ACTIVATION) {
-                    const nextPeriod = (0, lifecycle_1.buildSubscriptionPeriod)(linkedSubscription.plan.durationDays, nextReviewedAt);
+                if (linkedSubscription && shouldActivatePendingSubscriptionNow(linkedSubscription, nextReviewedAt)) {
+                    const nextPeriod = getActivationPeriodForPendingSubscription(linkedSubscription, nextReviewedAt);
                     await tx.subscription.update({
                         where: { id: linkedSubscription.id },
                         data: {

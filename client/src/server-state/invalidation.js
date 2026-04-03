@@ -27,6 +27,7 @@ export async function invalidatePaymentsQueries(queryClient) {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.me }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.mine }),
     invalidateDashboardQueries(queryClient),
   ])
 }

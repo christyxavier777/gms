@@ -77,6 +77,12 @@ exports.subscriptionsRouter.get("/me/subscription", require_auth_1.requireAuth, 
     const subscription = await (0, service_1.getMySubscription)(req.auth.userId);
     res.status(200).json({ subscription });
 });
+exports.subscriptionsRouter.get("/me/subscriptions", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.MEMBER), async (req, res) => {
+    if (!req.auth)
+        throw new http_error_1.HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+    const subscriptions = await (0, service_1.listMySubscriptions)(req.auth.userId);
+    res.status(200).json({ subscriptions });
+});
 exports.subscriptionsRouter.post("/subscriptions/:id/cancel", require_auth_1.requireAuth, (0, require_role_1.requireRole)(client_1.Role.ADMIN), async (req, res) => {
     try {
         const params = schemas_1.subscriptionIdParamSchema.parse(req.params);

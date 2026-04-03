@@ -46,6 +46,8 @@ export type SafePayment = {
   transactionId: string;
   userId: string;
   subscriptionId: string | null;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
   amount: number;
   amountMinor: number;
   upiId: string;

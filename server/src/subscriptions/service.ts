@@ -373,18 +373,41 @@ export async function getSubscriptionById(
 
 // Reads current member subscription.
 export async function getMySubscription(memberUserId: string): Promise<SafeSubscription | null> {
-  const subscription = await prisma.subscription.findFirst({
+  const activeSubscription = await prisma.subscription.findFirst({
     where: {
       userId: memberUserId,
-      OR: [
-        getActiveSubscriptionWhere(),
-        { status: SubscriptionStatus.PENDING_ACTIVATION },
-      ],
+      ...getActiveSubscriptionWhere(),
     },
-    orderBy: [{ createdAt: "desc" }],
+    orderBy: [{ endDate: "desc" }, { createdAt: "desc" }],
     include: subscriptionDetailInclude,
   });
-  return subscription ? toSafeSubscription(subscription) : null;
+
+  if (activeSubscription) {
+    return toSafeSubscription(activeSubscription);
+  }
+
+  const pendingSubscription = await prisma.subscription.findFirst({
+    where: {
+      userId: memberUserId,
+      status: SubscriptionStatus.PENDING_ACTIVATION,
+    },
+    orderBy: [{ startDate: "asc" }, { createdAt: "desc" }],
+    include: subscriptionDetailInclude,
+  });
+
+  return pendingSubscription ? toSafeSubscription(pendingSubscription) : null;
+}
+
+export async function listMySubscriptions(memberUserId: string): Promise<SafeSubscription[]> {
+  const subscriptions = await prisma.subscription.findMany({
+    where: {
+      userId: memberUserId,
+    },
+    orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
+    include: subscriptionDetailInclude,
+  });
+
+  return subscriptions.map(toSafeSubscription);
 }
 
 // Cancels a subscription explicitly.

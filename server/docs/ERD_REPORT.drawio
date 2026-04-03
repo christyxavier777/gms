@@ -49,11 +49,26 @@
         <mxCell id="rTracks" value="Tracks" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f4f4f;fontSize=14;" vertex="1" parent="1">
           <mxGeometry x="720" y="360" width="90" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="rWorkout" value="Creates /&#xa;Assigns" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f4f4f;fontSize=13;" vertex="1" parent="1">
+        <mxCell id="rWorkout" value="Creates" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f4f4f;fontSize=13;" vertex="1" parent="1">
           <mxGeometry x="720" y="600" width="100" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="rDiet" value="Creates /&#xa;Assigns" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f4f4f;fontSize=13;" vertex="1" parent="1">
+        <mxCell id="rDiet" value="Creates" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f4f4f;fontSize=13;" vertex="1" parent="1">
           <mxGeometry x="720" y="970" width="100" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="trainerAssignment" value="Trainer Member&#xa;Assignment" style="shape=rectangle;whiteSpace=wrap;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#6f5330;fontStyle=1;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1110" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="rTrainerLink" value="Assigned To&#xa;Trainer" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f4f4f;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="520" y="1110" width="105" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="rMemberLink" value="Has&#xa;Member" style="shape=rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4f4f4f;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="520" y="1210" width="105" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="planNote" value="Admin and Trainer create workout and diet plans.&#xa;Admin assigns those plans to members in the current workflow." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="700" y="500" width="320" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="roleNote" value="User roles: Admin, Trainer, Member" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="455" y="700" width="220" height="24" as="geometry"/>
         </mxCell>
 
         <mxCell id="uId" value="userId (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#8c8c8c;fontSize=12;" vertex="1" parent="1">
@@ -161,6 +176,15 @@
         <mxCell id="dpDesc" value="description" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#8c8c8c;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="1035" y="985" width="100" height="42" as="geometry"/>
         </mxCell>
+        <mxCell id="taId" value="assignmentId (PK)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#8c8c8c;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="820" y="1115" width="125" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="taActive" value="active" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#8c8c8c;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="700" y="1185" width="85" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="taCreated" value="createdAt" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#8c8c8c;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="835" y="1185" width="95" height="42" as="geometry"/>
+        </mxCell>
 
         <mxCell id="e1" edge="1" source="uId" target="user" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#666666;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry relative="1" as="geometry"/>
@@ -267,6 +291,15 @@
         <mxCell id="e33" edge="1" source="dpDesc" target="dietPlan" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#666666;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
+        <mxCell id="e34" edge="1" source="taId" target="trainerAssignment" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#666666;exitX=0;exitY=0.5;entryX=1;entryY=0.25;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e35" edge="1" source="taActive" target="trainerAssignment" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#666666;exitX=0.5;exitY=0;entryX=0.35;entryY=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e36" edge="1" source="taCreated" target="trainerAssignment" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#666666;exitX=0.5;exitY=0;entryX=0.7;entryY=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
 
         <mxCell id="rel1" edge="1" source="membershipPlan" target="rDefines" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#444444;exitX=0.6;exitY=1;entryX=0.5;entryY=0;">
           <mxGeometry relative="1" as="geometry"/>
@@ -308,6 +341,18 @@
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="rel14" edge="1" source="rDiet" target="dietPlan" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#444444;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel15" edge="1" source="user" target="rTrainerLink" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#444444;exitX=0.85;exitY=1;entryX=0.15;entryY=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel16" edge="1" source="rTrainerLink" target="trainerAssignment" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#444444;exitX=1;exitY=0.35;entryX=0;entryY=0.3;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel17" edge="1" source="user" target="rMemberLink" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#444444;exitX=0.7;exitY=1;entryX=0.15;entryY=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel18" edge="1" source="rMemberLink" target="trainerAssignment" parent="1" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;endArrow=none;startArrow=none;html=1;strokeColor=#444444;exitX=1;exitY=0.65;entryX=0;entryY=0.75;">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
 
@@ -352,6 +397,18 @@
         </mxCell>
         <mxCell id="c14" value="N" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;" vertex="1" parent="1">
           <mxGeometry x="855" y="995" width="20" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="c15" value="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="540" y="1085" width="20" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="c16" value="N" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1120" width="20" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="c17" value="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="540" y="1200" width="20" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="c18" value="N" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1235" width="20" height="20" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>

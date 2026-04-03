@@ -90,6 +90,14 @@ export function useMySubscriptionQuery(token, { enabled = true } = {}) {
   })
 }
 
+export function useMySubscriptionsQuery(token, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.subscriptions.mine,
+    queryFn: () => api.listMySubscriptions(token),
+    enabled: Boolean(token) && enabled,
+  })
+}
+
 export function usePaymentsQuery(token, params, { enabled = true } = {}) {
   return useQuery({
     queryKey: queryKeys.payments.list(params),

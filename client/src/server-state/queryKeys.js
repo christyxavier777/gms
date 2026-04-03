@@ -19,6 +19,7 @@ export const queryKeys = {
     all: ['subscriptions'],
     list: (params) => ['subscriptions', 'list', params],
     me: ['subscriptions', 'me'],
+    mine: ['subscriptions', 'mine'],
   },
   payments: {
     all: ['payments'],

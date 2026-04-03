@@ -6,6 +6,7 @@ exports.createOnboardingSubscription = createOnboardingSubscription;
 exports.listSubscriptions = listSubscriptions;
 exports.getSubscriptionById = getSubscriptionById;
 exports.getMySubscription = getMySubscription;
+exports.listMySubscriptions = listMySubscriptions;
 exports.cancelSubscription = cancelSubscription;
 const client_1 = require("@prisma/client");
 const client_2 = require("../prisma/client");
@@ -283,18 +284,36 @@ async function getSubscriptionById(requester, id) {
 }
 // Reads current member subscription.
 async function getMySubscription(memberUserId) {
-    const subscription = await prisma.subscription.findFirst({
+    const activeSubscription = await prisma.subscription.findFirst({
         where: {
             userId: memberUserId,
-            OR: [
-                (0, lifecycle_1.getActiveSubscriptionWhere)(),
-                { status: client_1.SubscriptionStatus.PENDING_ACTIVATION },
-            ],
+            ...(0, lifecycle_1.getActiveSubscriptionWhere)(),
         },
-        orderBy: [{ createdAt: "desc" }],
+        orderBy: [{ endDate: "desc" }, { createdAt: "desc" }],
         include: subscriptionDetailInclude,
     });
-    return subscription ? toSafeSubscription(subscription) : null;
+    if (activeSubscription) {
+        return toSafeSubscription(activeSubscription);
+    }
+    const pendingSubscription = await prisma.subscription.findFirst({
+        where: {
+            userId: memberUserId,
+            status: client_1.SubscriptionStatus.PENDING_ACTIVATION,
+        },
+        orderBy: [{ startDate: "asc" }, { createdAt: "desc" }],
+        include: subscriptionDetailInclude,
+    });
+    return pendingSubscription ? toSafeSubscription(pendingSubscription) : null;
+}
+async function listMySubscriptions(memberUserId) {
+    const subscriptions = await prisma.subscription.findMany({
+        where: {
+            userId: memberUserId,
+        },
+        orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
+        include: subscriptionDetailInclude,
+    });
+    return subscriptions.map(toSafeSubscription);
 }
 // Cancels a subscription explicitly.
 async function cancelSubscription(id) {

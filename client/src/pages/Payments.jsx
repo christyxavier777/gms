@@ -185,6 +185,28 @@ function getReviewActions(status) {
   ]
 }
 
+function isRazorpayPayment(payment) {
+  return (
+    payment?.upiId === 'RAZORPAY_CHECKOUT' ||
+    Boolean(payment?.razorpayOrderId) ||
+    Boolean(payment?.razorpayPaymentId)
+  )
+}
+
+function getPaymentMethodLabel(payment) {
+  return isRazorpayPayment(payment) ? 'Razorpay Checkout' : `UPI • ${payment.upiId}`
+}
+
+function getPaymentStatusCopy(payment, isAdmin) {
+  if (isRazorpayPayment(payment) && payment.status === 'PENDING') {
+    return isAdmin
+      ? 'Razorpay checkout was created but payment has not been completed or confirmed yet.'
+      : 'Your Razorpay checkout was started, but the final payment confirmation has not reached the platform yet.'
+  }
+
+  return isAdmin ? adminStatusCopy[payment.status] : memberStatusCopy[payment.status]
+}
+
 function PaymentCard({
   payment,
   canReview,
@@ -194,7 +216,7 @@ function PaymentCard({
   reviewNote,
   onReviewNoteChange,
 }) {
-  const statusMessage = isAdmin ? adminStatusCopy[payment.status] : memberStatusCopy[payment.status]
+  const statusMessage = getPaymentStatusCopy(payment, isAdmin)
   const reviewActions = canReview ? getReviewActions(payment.status) : []
   const statusStyle = statusStyles[payment.status] || {
     badge: 'border-white/20 bg-white/5 text-white',
@@ -212,9 +234,23 @@ function PaymentCard({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <p className="text-sm text-gray-300">{formatAmountMinor(payment.amountMinor)}</p>
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-400">
-              via {payment.upiId}
+              via {getPaymentMethodLabel(payment)}
             </span>
           </div>
+          {(payment.razorpayOrderId || payment.razorpayPaymentId) && (
+            <div className="mt-3 space-y-1 text-xs text-gray-400">
+              {payment.razorpayOrderId && (
+                <p className="break-all">
+                  Razorpay order: <span className="text-gray-200">{payment.razorpayOrderId}</span>
+                </p>
+              )}
+              {payment.razorpayPaymentId && (
+                <p className="break-all">
+                  Razorpay payment: <span className="text-gray-200">{payment.razorpayPaymentId}</span>
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <span
           className={`inline-flex w-fit border px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ${statusStyle.badge}`}
@@ -278,6 +314,9 @@ function PaymentCard({
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Timeline</p>
           <p className="mt-1 text-sm text-white">Submitted: {formatDateTime(payment.createdAt)}</p>
           <p className="mt-2 text-sm text-gray-300">Last updated: {formatDateTime(payment.updatedAt)}</p>
+          {isRazorpayPayment(payment) && (
+            <p className="mt-2 text-sm text-gray-300">Payment method: Razorpay Checkout</p>
+          )}
           {payment.reviewer && (
             <p className="mt-2 text-sm text-gray-300">
               Reviewed by {payment.reviewer.name} on {formatDateTime(payment.reviewedAt)}
@@ -405,6 +444,7 @@ export default function Payments() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
+  const [showAllMemberPayments, setShowAllMemberPayments] = useState(false)
   const [isAmountDirty, setIsAmountDirty] = useState(false)
   const [form, setForm] = useState({
     amount: '',
@@ -650,6 +690,8 @@ export default function Payments() {
     () => payments.filter((payment) => payment.status === 'PENDING'),
     [payments],
   )
+  const visiblePayments =
+    isMember && !showAllMemberPayments ? payments.slice(0, 1) : payments
 
   const totalAmountMinor = summary.verifiedRevenueMinor || 0
 
@@ -934,7 +976,7 @@ export default function Payments() {
         </div>
 
         <div className="mt-4 grid gap-4">
-          {payments.map((payment) => (
+          {visiblePayments.map((payment) => (
             <PaymentCard
               key={payment.id}
               payment={payment}
@@ -946,17 +988,30 @@ export default function Payments() {
               onReviewNoteChange={(paymentId, value) =>
                 setReviewNotes((current) => ({ ...current, [paymentId]: value }))
               }
-            />
+              />
           ))}
         </div>
-        <PaginationControls
-          page={pagination.page}
-          pageSize={pagination.pageSize}
-          totalItems={pagination.total}
-          totalPages={pagination.totalPages}
-          itemLabel={isAdmin ? 'ledger records' : 'payments'}
-          onPageChange={setPage}
-        />
+        {isMember && payments.length > 1 && (
+          <div className="mt-4 flex justify-start">
+            <button
+              type="button"
+              onClick={() => setShowAllMemberPayments((current) => !current)}
+              className="border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-gray-200 transition hover:border-[#ff8b5f]/70 hover:text-white"
+            >
+              {showAllMemberPayments ? 'Show Less' : `Show Previous Transactions (${payments.length - 1})`}
+            </button>
+          </div>
+        )}
+        {isAdmin && (
+          <PaginationControls
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalItems={pagination.total}
+            totalPages={pagination.totalPages}
+            itemLabel={isAdmin ? 'ledger records' : 'payments'}
+            onPageChange={setPage}
+          />
+        )}
       </section>
     </DashboardLayout>
   )

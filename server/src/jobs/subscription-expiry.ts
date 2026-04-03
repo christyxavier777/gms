@@ -1,4 +1,4 @@
-import { SubscriptionStatus } from "@prisma/client";
+import { PaymentStatus, SubscriptionStatus } from "@prisma/client";
 import { invalidateDashboardCache } from "../dashboard/cache";
 import { createPrismaClient } from "../prisma/client";
 import { todayUtc } from "../subscriptions/lifecycle";
@@ -10,9 +10,10 @@ export async function expireOverdueSubscriptions(now = new Date()): Promise<{
   checkedAt: string;
   expiredCount: number;
   cancelledCount: number;
+  activatedCount: number;
 }> {
   const cutoff = todayUtc(now);
-  const [expiredResult, cancelledResult] = await prisma.$transaction([
+  const [expiredResult, cancelledResult, activatedResult] = await prisma.$transaction([
     prisma.subscription.updateMany({
       where: {
         status: SubscriptionStatus.ACTIVE,
@@ -31,9 +32,23 @@ export async function expireOverdueSubscriptions(now = new Date()): Promise<{
         status: SubscriptionStatus.CANCELLED,
       },
     }),
+    prisma.subscription.updateMany({
+      where: {
+        status: SubscriptionStatus.PENDING_ACTIVATION,
+        startDate: { lte: cutoff },
+        payments: {
+          some: {
+            status: PaymentStatus.SUCCESS,
+          },
+        },
+      },
+      data: {
+        status: SubscriptionStatus.ACTIVE,
+      },
+    }),
   ]);
 
-  if (expiredResult.count > 0 || cancelledResult.count > 0) {
+  if (expiredResult.count > 0 || cancelledResult.count > 0 || activatedResult.count > 0) {
     await invalidateDashboardCache("subscription_expiry_job");
   }
 
@@ -41,6 +56,7 @@ export async function expireOverdueSubscriptions(now = new Date()): Promise<{
     checkedAt: now.toISOString(),
     expiredCount: expiredResult.count,
     cancelledCount: cancelledResult.count,
+    activatedCount: activatedResult.count,
   };
 }
 

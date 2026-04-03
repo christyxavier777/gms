@@ -15,6 +15,7 @@ import {
   createOnboardingSubscription,
   createSubscription,
   listMembershipPlans,
+  listMySubscriptions,
   getMySubscription,
   getSubscriptionById,
   listSubscriptions,
@@ -91,6 +92,12 @@ subscriptionsRouter.get("/me/subscription", requireAuth, requireRole(Role.MEMBER
   if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
   const subscription = await getMySubscription(req.auth.userId);
   res.status(200).json({ subscription });
+});
+
+subscriptionsRouter.get("/me/subscriptions", requireAuth, requireRole(Role.MEMBER), async (req, res) => {
+  if (!req.auth) throw new HttpError(401, "AUTH_REQUIRED", "Authentication is required");
+  const subscriptions = await listMySubscriptions(req.auth.userId);
+  res.status(200).json({ subscriptions });
 });
 
 subscriptionsRouter.post(

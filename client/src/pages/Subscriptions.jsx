@@ -16,6 +16,7 @@ import {
   useAccessibleMembersQuery,
   useMembershipPlansQuery,
   useMySubscriptionQuery,
+  useMySubscriptionsQuery,
   useSubscriptionsQuery,
 } from '../server-state/queries'
 
@@ -129,6 +130,7 @@ export default function Subscriptions() {
   const membersQuery = useAccessibleMembersQuery(token, { enabled: isAdmin })
   const subscriptionsQuery = useSubscriptionsQuery(token, subscriptionParams, { enabled: isAdmin })
   const mySubscriptionQuery = useMySubscriptionQuery(token, { enabled: isMember })
+  const mySubscriptionsQuery = useMySubscriptionsQuery(token, { enabled: isMember })
   const createSubscriptionMutation = useServerActionMutation({
     actionStatus,
     mutationFn: (payload) => api.createSubscription(token, payload),
@@ -166,9 +168,9 @@ export default function Subscriptions() {
   const loading =
     membershipPlansQuery.isPending ||
     (isAdmin && (membersQuery.isPending || subscriptionsQuery.isPending)) ||
-    (isMember && mySubscriptionQuery.isPending)
+    (isMember && (mySubscriptionQuery.isPending || mySubscriptionsQuery.isPending))
   const queryError = getCombinedServerStateError(
-    [membershipPlansQuery, membersQuery, subscriptionsQuery, mySubscriptionQuery],
+    [membershipPlansQuery, membersQuery, subscriptionsQuery, mySubscriptionQuery, mySubscriptionsQuery],
     'Failed to load subscriptions.',
   )
   const hasStatusMessage = Boolean(actionStatus.errorMessage || actionStatus.successMessage || queryError)
@@ -187,6 +189,13 @@ export default function Subscriptions() {
   const hasLiveAdminData = summary.total > 0
   const displaySubscriptions = subscriptions
   const displayMySubscription = mySubscription
+  const mySubscriptions = mySubscriptionsQuery.data?.subscriptions ?? EMPTY_SUBSCRIPTIONS
+  const upcomingRenewal =
+    mySubscriptions.find((subscription) => {
+      if (subscription.status !== 'PENDING_ACTIVATION') return false
+      if (!displayMySubscription) return true
+      return new Date(subscription.startDate) > new Date(displayMySubscription.endDate)
+    }) || null
   const getMemberSummary = (memberId) => members.find((member) => member.id === memberId) || null
   const formatMemberLabel = (memberId, memberSummary = null) => {
     if (memberSummary?.name && memberSummary?.email) {
@@ -569,6 +578,12 @@ export default function Subscriptions() {
                 <p className="mt-1 text-sm text-gray-300">
                   {toInputDate(displayMySubscription.startDate)} to {toInputDate(displayMySubscription.endDate)}
                 </p>
+                {(displayMySubscription.status === 'ACTIVE' || displayMySubscription.status === 'CANCELLED_AT_PERIOD_END') && (
+                  <div className="mt-3 border border-[#3a2a1f] bg-[#211612] px-3 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#ffb48d]">Membership Valid Till</p>
+                    <p className="mt-1 text-xl font-black text-white">{toInputDate(displayMySubscription.endDate)}</p>
+                  </div>
+                )}
                 <p className="mt-1 text-sm text-gray-300">
                   Status: {formatStatusLabel(displayMySubscription.status)}
                 </p>
@@ -582,6 +597,18 @@ export default function Subscriptions() {
               <div className="mt-4 border border-dashed border-[#2f2f2f] bg-[#161616] p-4">
                 <p className="text-sm text-gray-300">
                   Choose a package during onboarding or ask an admin to create your subscription.
+                </p>
+              </div>
+            )}
+            {upcomingRenewal && (
+              <div className="mt-4 border border-[#2f2f2f] bg-[#1A1A1A] p-4">
+                <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#E21A2C]">Upcoming Renewal</p>
+                <p className="mt-1 text-sm font-semibold text-white">{upcomingRenewal.planName}</p>
+                <p className="mt-1 text-sm text-gray-300">
+                  {toInputDate(upcomingRenewal.startDate)} to {toInputDate(upcomingRenewal.endDate)}
+                </p>
+                <p className="mt-2 text-xs uppercase tracking-[0.08em] text-yellow-300">
+                  Paid early. This next period begins automatically after your current one ends.
                 </p>
               </div>
             )}

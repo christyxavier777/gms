@@ -1,5 +1,8 @@
 %% Current ER diagram aligned to server/prisma/schema.prisma.
 %% Notes:
+%% - USER.role is one of ADMIN, TRAINER, MEMBER.
+%% - Workout/diet plans are created by ADMIN or TRAINER via createdById.
+%% - Workout/diet plans are assigned to MEMBER via assignedToId, with assignment performed by ADMIN in the current workflow.
 %% - WEARABLE_WEBHOOK_AUDIT_EVENT.memberUserId is stored as an identifier, not a Prisma relation.
 %% - Composite uniques exist on TRAINER_MEMBER_ASSIGNMENT(trainerId, memberId)
 %%   and SCHEDULE_BOOKING(sessionId, memberId).
@@ -157,10 +160,10 @@ erDiagram
     datetime createdAt
   }
 
-  USER ||--o{ WORKOUT_PLAN : creates
-  USER ||--o{ WORKOUT_PLAN : assigned
-  USER ||--o{ DIET_PLAN : creates
-  USER ||--o{ DIET_PLAN : assigned
+  USER ||--o{ WORKOUT_PLAN : creates_admin_or_trainer
+  USER ||--o{ WORKOUT_PLAN : assigned_member
+  USER ||--o{ DIET_PLAN : creates_admin_or_trainer
+  USER ||--o{ DIET_PLAN : assigned_member
   USER ||--o{ SUBSCRIPTION : owns
   MEMBERSHIP_PLAN ||--o{ SUBSCRIPTION : defines
   USER ||--o{ PROGRESS : has_entries

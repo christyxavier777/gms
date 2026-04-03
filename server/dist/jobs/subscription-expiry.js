@@ -10,7 +10,7 @@ const logger_1 = require("../utils/logger");
 const prisma = (0, client_2.createPrismaClient)();
 async function expireOverdueSubscriptions(now = new Date()) {
     const cutoff = (0, lifecycle_1.todayUtc)(now);
-    const [expiredResult, cancelledResult] = await prisma.$transaction([
+    const [expiredResult, cancelledResult, activatedResult] = await prisma.$transaction([
         prisma.subscription.updateMany({
             where: {
                 status: client_1.SubscriptionStatus.ACTIVE,
@@ -29,14 +29,29 @@ async function expireOverdueSubscriptions(now = new Date()) {
                 status: client_1.SubscriptionStatus.CANCELLED,
             },
         }),
+        prisma.subscription.updateMany({
+            where: {
+                status: client_1.SubscriptionStatus.PENDING_ACTIVATION,
+                startDate: { lte: cutoff },
+                payments: {
+                    some: {
+                        status: client_1.PaymentStatus.SUCCESS,
+                    },
+                },
+            },
+            data: {
+                status: client_1.SubscriptionStatus.ACTIVE,
+            },
+        }),
     ]);
-    if (expiredResult.count > 0 || cancelledResult.count > 0) {
+    if (expiredResult.count > 0 || cancelledResult.count > 0 || activatedResult.count > 0) {
         await (0, cache_1.invalidateDashboardCache)("subscription_expiry_job");
     }
     return {
         checkedAt: now.toISOString(),
         expiredCount: expiredResult.count,
         cancelledCount: cancelledResult.count,
+        activatedCount: activatedResult.count,
     };
 }
 async function runSubscriptionExpiryJob(now = new Date()) {

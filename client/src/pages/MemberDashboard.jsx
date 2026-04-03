@@ -3,7 +3,7 @@ import DashboardLayout from '../components/DashboardLayout'
 import StatusBanner from '../components/StatusBanner'
 import { useAuth } from '../context/AuthContext'
 import { getServerStateErrorMessage } from '../server-state/errors'
-import { useMemberDashboardQuery } from '../server-state/queries'
+import { useMemberDashboardQuery, useMySubscriptionsQuery } from '../server-state/queries'
 
 function formatDate(date) {
   try {
@@ -23,6 +23,7 @@ function formatStatusLabel(value) {
 export default function MemberDashboard() {
   const { user, token } = useAuth()
   const dashboardQuery = useMemberDashboardQuery(token, 8)
+  const subscriptionsQuery = useMySubscriptionsQuery(token)
   const dashboard = dashboardQuery.data?.dashboard ?? null
   const error = dashboardQuery.error
     ? getServerStateErrorMessage(dashboardQuery.error, 'Failed to load member dashboard.')
@@ -40,7 +41,20 @@ export default function MemberDashboard() {
   const workoutLive = dashboard?.assignedWorkoutPlans || []
   const dietLive = dashboard?.assignedDietPlans || []
   const progressLive = dashboard?.recentProgressEntries || []
-  const subscriptionSummary = dashboard?.activeSubscriptionSummary || null
+  const subscriptionTimeline = subscriptionsQuery.data?.subscriptions ?? []
+  const currentDate = new Date()
+  const currentSubscription =
+    subscriptionTimeline.find((subscription) =>
+      subscription.status === 'ACTIVE' || subscription.status === 'CANCELLED_AT_PERIOD_END',
+    ) ||
+    dashboard?.activeSubscriptionSummary ||
+    null
+  const upcomingSubscription =
+    subscriptionTimeline.find(
+      (subscription) =>
+        subscription.status === 'PENDING_ACTIVATION' && new Date(subscription.startDate) > currentDate,
+    ) || null
+  const subscriptionSummary = currentSubscription || dashboard?.activeSubscriptionSummary || null
   const hasSubscriptionData = Boolean(subscriptionSummary)
   const hasLiveData =
     workoutLive.length > 0 || dietLive.length > 0 || progressLive.length > 0 || hasSubscriptionData
@@ -51,12 +65,18 @@ export default function MemberDashboard() {
   const subscriptionStatusLabel = subscriptionSummary?.status
     ? formatStatusLabel(subscriptionSummary.status)
     : 'None'
+  const subscriptionValidityLabel =
+    subscriptionSummary?.status === 'PENDING_ACTIVATION'
+      ? 'Awaiting payment'
+      : subscriptionSummary?.endDate
+        ? formatDate(subscriptionSummary.endDate)
+        : 'Not available'
 
   const metrics = [
     { label: 'Assigned Workout Plans', value: workoutPlans.length, hint: 'Current training blocks' },
     { label: 'Assigned Diet Plans', value: dietPlans.length, hint: 'Nutrition protocols' },
     { label: 'Recent Progress Entries', value: progressEntries.length, hint: 'Logged performance' },
-    { label: 'Subscription Status', value: subscriptionStatusLabel, hint: 'Membership lifecycle' },
+    { label: 'Membership Valid Till', value: subscriptionValidityLabel, hint: 'Current membership window' },
   ]
 
   const reminders = [
@@ -154,15 +174,18 @@ export default function MemberDashboard() {
               </p>
             </div>
             <div className="border border-white/10 bg-black/30 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">
-                {subscriptionSummary?.status === 'PENDING_ACTIVATION' ? 'Activation State' : 'Current Period Ends'}
-              </p>
-              <p className="mt-1 text-lg font-black text-white">
+              <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Membership Valid Till</p>
+              <p className="mt-1 text-2xl font-black text-white">
                 {subscriptionSummary?.status === 'PENDING_ACTIVATION'
                   ? 'Waiting for payment completion'
                   : subscriptionSummary?.endDate
                     ? formatDate(subscriptionSummary.endDate)
                     : '-'}
+              </p>
+              <p className="mt-2 text-xs uppercase tracking-[0.08em] text-[#ff8b5f]">
+                {subscriptionSummary?.status === 'PENDING_ACTIVATION'
+                  ? 'Complete payment to begin this membership period'
+                  : 'This is the date your current access window ends'}
               </p>
             </div>
             {subscriptionSummary?.status && (
@@ -170,6 +193,18 @@ export default function MemberDashboard() {
                 <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Lifecycle Status</p>
                 <p className="mt-1 text-lg font-black text-white">
                   {subscriptionStatusLabel}
+                </p>
+              </div>
+            )}
+            {upcomingSubscription && (
+              <div className="border border-white/10 bg-black/30 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-300">Upcoming Renewal</p>
+                <p className="mt-1 text-lg font-black text-white">{upcomingSubscription.planName}</p>
+                <p className="mt-1 text-sm text-gray-300">
+                  Starts {formatDate(upcomingSubscription.startDate)} and runs until {formatDate(upcomingSubscription.endDate)}
+                </p>
+                <p className="mt-2 text-xs uppercase tracking-[0.08em] text-[#ff8b5f]">
+                  Already paid. This plan begins after your current period ends.
                 </p>
               </div>
             )}

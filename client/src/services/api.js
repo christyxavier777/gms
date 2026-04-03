@@ -271,6 +271,12 @@ export const api = {
       headers: authHeaders(token),
     }),
 
+  listMySubscriptions: (token) =>
+    request('/me/subscriptions', {
+      method: 'GET',
+      headers: authHeaders(token),
+    }),
+
   createProgress: (token, payload) =>
     request('/progress', {
       method: 'POST',

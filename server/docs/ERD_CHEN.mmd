@@ -1,5 +1,9 @@
 %% Simplified Chen-style ER diagram for report/presentation use.
 %% This is intentionally cleaner than ERD.mmd and focuses on the main domain entities.
+%% Role semantics for the built system:
+%% - ADMIN, TRAINER, MEMBER are stored in USER.role.
+%% - ADMIN and TRAINER create workout/diet plans.
+%% - ADMIN assigns workout/diet plans to MEMBER.
 
 flowchart LR
   classDef entity fill:#fff8ec,stroke:#6f5330,stroke-width:1.6px,color:#2f2418;
@@ -13,6 +17,7 @@ flowchart LR
   PROG[Progress]
   WP[Workout Plan]
   DP[Diet Plan]
+  TMA[Trainer Member Assignment]
   SS[Schedule Session]
   SB[Schedule Booking]
 
@@ -56,6 +61,10 @@ flowchart LR
   dptitle(("title"))
   dpdesc(("description"))
 
+  tmaid(("assignmentId (PK)"))
+  tmaactive(("active"))
+  tmacreated(("createdAt"))
+
   ssid(("scheduleSessionId (PK)"))
   sstitle(("title"))
   sstype(("sessionType"))
@@ -71,10 +80,12 @@ flowchart LR
   makes{Makes}
   covers{Covers}
   tracks{Tracks}
-  createsWorkout{Creates}
-  assignedWorkout{Assigned}
-  createsDiet{Creates}
-  assignedDiet{Assigned}
+  createsWorkout{Creates (Admin/Trainer)}
+  assignedWorkout{Assigned To Member}
+  createsDiet{Creates (Admin/Trainer)}
+  assignedDiet{Assigned To Member}
+  assignedTrainer{Assigned To Trainer}
+  trainerRoster{Has Member}
   leads{Leads}
   hasBookings{Has}
   books{Books}
@@ -119,6 +130,10 @@ flowchart LR
   dptitle --- DP
   dpdesc --- DP
 
+  tmaid --- TMA
+  tmaactive --- TMA
+  tmacreated --- TMA
+
   ssid --- SS
   sstitle --- SS
   sstype --- SS
@@ -156,6 +171,12 @@ flowchart LR
   U --- assignedDiet
   assignedDiet --- DP
 
+  U --- assignedTrainer
+  assignedTrainer --- TMA
+
+  U --- trainerRoster
+  trainerRoster --- TMA
+
   U --- leads
   leads --- SS
 
@@ -165,6 +186,6 @@ flowchart LR
   U --- books
   books --- SB
 
-  class U,MP,SUB,PAY,PROG,WP,DP,SS,SB entity;
-  class owns,defines,makes,covers,tracks,createsWorkout,assignedWorkout,createsDiet,assignedDiet,leads,hasBookings,books relation;
-  class uid,uname,uemail,uphone,urole,ustatus,mpid,mpname,mpprice,mpduration,mpactive,sid,splan,sstart,send,sstatus,payid,txid,amount,upi,paystatus,prid,pweight,pheight,pbmi,pbodyfat,prec,wpid,wptitle,wpdesc,dpid,dptitle,dpdesc,ssid,sstitle,sstype,ssstart,ssend,sbid,sbstatus,sbcreated attr;
+  class U,MP,SUB,PAY,PROG,WP,DP,TMA,SS,SB entity;
+  class owns,defines,makes,covers,tracks,createsWorkout,assignedWorkout,createsDiet,assignedDiet,assignedTrainer,trainerRoster,leads,hasBookings,books relation;
+  class uid,uname,uemail,uphone,urole,ustatus,mpid,mpname,mpprice,mpduration,mpactive,sid,splan,sstart,send,sstatus,payid,txid,amount,upi,paystatus,prid,pweight,pheight,pbmi,pbodyfat,prec,wpid,wptitle,wpdesc,dpid,dptitle,dpdesc,tmaid,tmaactive,tmacreated,ssid,sstitle,sstype,ssstart,ssend,sbid,sbstatus,sbcreated attr;

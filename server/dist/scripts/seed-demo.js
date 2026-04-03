@@ -25,52 +25,197 @@ function buildEmail(localPart) {
 }
 function buildDemoUsers() {
     const sharedMemberPassword = readOptionalEnv("DEMO_MEMBER_PASSWORD", "DemoMember123");
+    const sharedTrainerPassword = readOptionalEnv("DEMO_TRAINER_PASSWORD", "DemoTrainer123");
     return [
         {
             key: "admin",
-            name: "Demo Admin",
-            email: buildEmail("demo.admin"),
-            phone: "9000000001",
+            name: "Rathan",
+            email: buildEmail("rathan.admin"),
+            phone: "9100000001",
             password: readOptionalEnv("DEMO_ADMIN_PASSWORD", "DemoAdmin123"),
             role: client_1.Role.ADMIN,
         },
         {
-            key: "trainer",
-            name: "Demo Trainer",
-            email: buildEmail("demo.trainer"),
-            phone: "9000000002",
-            password: readOptionalEnv("DEMO_TRAINER_PASSWORD", "DemoTrainer123"),
+            key: "trainerSwasthik",
+            name: "Swasthik",
+            phone: "9100000002",
+            email: buildEmail("swasthik.trainer"),
+            password: sharedTrainerPassword,
             role: client_1.Role.TRAINER,
         },
         {
-            key: "memberActive",
-            name: "Aanya Active",
-            email: buildEmail("aanya.active"),
-            phone: "9000000003",
+            key: "trainerSuhag",
+            name: "Suhag",
+            email: buildEmail("suhag.trainer"),
+            phone: "9100000003",
+            password: sharedTrainerPassword,
+            role: client_1.Role.TRAINER,
+        },
+        {
+            key: "trainerBrandan",
+            name: "Brandan",
+            email: buildEmail("brandan.trainer"),
+            phone: "9100000004",
+            password: sharedTrainerPassword,
+            role: client_1.Role.TRAINER,
+        },
+        {
+            key: "trainerDeekshitha",
+            name: "Deekshitha",
+            email: buildEmail("deekshitha.trainer"),
+            phone: "9100000005",
+            password: sharedTrainerPassword,
+            role: client_1.Role.TRAINER,
+        },
+        {
+            key: "trainerKishore",
+            name: "Kishore",
+            email: buildEmail("kishore.trainer"),
+            phone: "9100000006",
+            password: sharedTrainerPassword,
+            role: client_1.Role.TRAINER,
+        },
+        {
+            key: "memberArjunMehta",
+            name: "Arjun Mehta",
+            email: buildEmail("arjun.mehta"),
+            phone: "9100000011",
             password: sharedMemberPassword,
             role: client_1.Role.MEMBER,
         },
         {
-            key: "memberPending",
-            name: "Vihaan Pending",
-            email: buildEmail("vihaan.pending"),
-            phone: "9000000004",
+            key: "memberNiharikaRao",
+            name: "Niharika Rao",
+            email: buildEmail("niharika.rao"),
+            phone: "9100000012",
             password: sharedMemberPassword,
             role: client_1.Role.MEMBER,
         },
         {
-            key: "memberEnding",
-            name: "Sara Ending",
-            email: buildEmail("sara.ending"),
-            phone: "9000000005",
+            key: "memberRohitSharma",
+            name: "Rohit Sharma",
+            email: buildEmail("rohit.sharma"),
+            phone: "9100000013",
             password: sharedMemberPassword,
             role: client_1.Role.MEMBER,
         },
         {
-            key: "memberCancelled",
-            name: "Kabir Cancelled",
-            email: buildEmail("kabir.cancelled"),
-            phone: "9000000006",
+            key: "memberSnehaIyer",
+            name: "Sneha Iyer",
+            email: buildEmail("sneha.iyer"),
+            phone: "9100000014",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberKaranMalhotra",
+            name: "Karan Malhotra",
+            email: buildEmail("karan.malhotra"),
+            phone: "9100000015",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberPriyaNair",
+            name: "Priya Nair",
+            email: buildEmail("priya.nair"),
+            phone: "9100000016",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberAdityaKulkarni",
+            name: "Aditya Kulkarni",
+            email: buildEmail("aditya.kulkarni"),
+            phone: "9100000017",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberMeeraKrishnan",
+            name: "Meera Krishnan",
+            email: buildEmail("meera.krishnan"),
+            phone: "9100000018",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberRahulVerma",
+            name: "Rahul Verma",
+            email: buildEmail("rahul.verma"),
+            phone: "9100000019",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberAnanyaReddy",
+            name: "Ananya Reddy",
+            email: buildEmail("ananya.reddy"),
+            phone: "9100000020",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberDevanshGupta",
+            name: "Devansh Gupta",
+            email: buildEmail("devansh.gupta"),
+            phone: "9100000021",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberIshitaMenon",
+            name: "Ishita Menon",
+            email: buildEmail("ishita.menon"),
+            phone: "9100000022",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberVikramDesai",
+            name: "Vikram Desai",
+            email: buildEmail("vikram.desai"),
+            phone: "9100000023",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberAriaKapoor",
+            name: "Aria Kapoor",
+            email: buildEmail("aria.kapoor"),
+            phone: "9100000024",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberAanyaActive",
+            name: "Naveen Joshi",
+            email: buildEmail("naveen.joshi"),
+            phone: "9100000028",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberVihaanPending",
+            name: "Pooja Sreenivasan",
+            email: buildEmail("pooja.sreenivasan"),
+            phone: "9100000025",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberSaraEnding",
+            name: "Siddharth Rao",
+            email: buildEmail("siddharth.rao"),
+            phone: "9100000026",
+            password: sharedMemberPassword,
+            role: client_1.Role.MEMBER,
+        },
+        {
+            key: "memberKabirCancelled",
+            name: "Tanvi Deshpande",
+            email: buildEmail("tanvi.deshpande"),
+            phone: "9100000027",
             password: sharedMemberPassword,
             role: client_1.Role.MEMBER,
         },
@@ -186,6 +331,20 @@ async function createUsers(userSeeds) {
     return createdUsers;
 }
 async function seedMembershipData(users) {
+    const admin = users.admin;
+    const trainerSwasthik = users.trainerSwasthik;
+    const trainerSuhag = users.trainerSuhag;
+    const trainerBrandan = users.trainerBrandan;
+    const trainerDeekshitha = users.trainerDeekshitha;
+    const trainerKishore = users.trainerKishore;
+    const memberAanyaActive = users.memberAanyaActive;
+    const memberVihaanPending = users.memberVihaanPending;
+    const memberSaraEnding = users.memberSaraEnding;
+    const memberKabirCancelled = users.memberKabirCancelled;
+    const memberArjunMehta = users.memberArjunMehta;
+    const memberSnehaIyer = users.memberSnehaIyer;
+    const memberPriyaNair = users.memberPriyaNair;
+    const memberRahulVerma = users.memberRahulVerma;
     const [basicPlan, proPlan, elitePlan] = await Promise.all([
         prisma.membershipPlan.findUnique({ where: { id: "basic-monthly" }, select: { id: true, name: true, priceMinor: true, durationDays: true } }),
         prisma.membershipPlan.findUnique({ where: { id: "pro-quarterly" }, select: { id: true, name: true, priceMinor: true, durationDays: true } }),
@@ -201,7 +360,7 @@ async function seedMembershipData(users) {
     const cancelledStart = (0, lifecycle_1.addUtcDays)(today, -50);
     const activeSubscription = await prisma.subscription.create({
         data: {
-            userId: users.memberActive.id,
+            userId: memberAanyaActive.id,
             planId: proPlan.id,
             planName: proPlan.name,
             startDate: activeStart,
@@ -212,7 +371,7 @@ async function seedMembershipData(users) {
     });
     const pendingSubscription = await prisma.subscription.create({
         data: {
-            userId: users.memberPending.id,
+            userId: memberVihaanPending.id,
             planId: basicPlan.id,
             planName: basicPlan.name,
             startDate: pendingStart,
@@ -223,7 +382,7 @@ async function seedMembershipData(users) {
     });
     const endingSubscription = await prisma.subscription.create({
         data: {
-            userId: users.memberEnding.id,
+            userId: memberSaraEnding.id,
             planId: elitePlan.id,
             planName: elitePlan.name,
             startDate: endingStart,
@@ -234,7 +393,7 @@ async function seedMembershipData(users) {
     });
     const cancelledSubscription = await prisma.subscription.create({
         data: {
-            userId: users.memberCancelled.id,
+            userId: memberKabirCancelled.id,
             planId: basicPlan.id,
             planName: basicPlan.name,
             startDate: cancelledStart,
@@ -245,9 +404,14 @@ async function seedMembershipData(users) {
     });
     await prisma.trainerMemberAssignment.createMany({
         data: [
-            { trainerId: users.trainer.id, memberId: users.memberActive.id, active: true },
-            { trainerId: users.trainer.id, memberId: users.memberEnding.id, active: true },
-            { trainerId: users.trainer.id, memberId: users.memberPending.id, active: true },
+            { trainerId: trainerSwasthik.id, memberId: memberAanyaActive.id, active: true },
+            { trainerId: trainerSwasthik.id, memberId: memberVihaanPending.id, active: true },
+            { trainerId: trainerSuhag.id, memberId: memberSaraEnding.id, active: true },
+            { trainerId: trainerBrandan.id, memberId: memberKabirCancelled.id, active: true },
+            { trainerId: trainerDeekshitha.id, memberId: memberArjunMehta.id, active: true },
+            { trainerId: trainerDeekshitha.id, memberId: memberSnehaIyer.id, active: true },
+            { trainerId: trainerKishore.id, memberId: memberPriyaNair.id, active: true },
+            { trainerId: trainerKishore.id, memberId: memberRahulVerma.id, active: true },
         ],
     });
     await prisma.workoutPlan.createMany({
@@ -255,14 +419,20 @@ async function seedMembershipData(users) {
             {
                 title: "Strength Base Split",
                 description: "Three-day compound-focused strength block for onboarding members.",
-                createdById: users.trainer.id,
-                assignedToId: users.memberActive.id,
+                createdById: trainerSwasthik.id,
+                assignedToId: memberAanyaActive.id,
             },
             {
                 title: "Hybrid Conditioning",
                 description: "Mobility, intervals, and steady-state work for schedule-compliant progress.",
-                createdById: users.trainer.id,
-                assignedToId: users.memberEnding.id,
+                createdById: trainerSuhag.id,
+                assignedToId: memberSaraEnding.id,
+            },
+            {
+                title: "Executive Strength Progression",
+                description: "Structured compound work for members focused on long-term consistency.",
+                createdById: trainerDeekshitha.id,
+                assignedToId: memberArjunMehta.id,
             },
         ],
     });
@@ -271,27 +441,33 @@ async function seedMembershipData(users) {
             {
                 title: "High Protein Reset",
                 description: "Recovery-first meal pattern with consistent protein targets.",
-                createdById: users.trainer.id,
-                assignedToId: users.memberActive.id,
+                createdById: trainerSwasthik.id,
+                assignedToId: memberAanyaActive.id,
             },
             {
                 title: "Maintenance Balance",
                 description: "Balanced meal timing tuned for an active long-term member.",
-                createdById: users.trainer.id,
-                assignedToId: users.memberEnding.id,
+                createdById: trainerSuhag.id,
+                assignedToId: memberSaraEnding.id,
+            },
+            {
+                title: "Professional Performance Nutrition",
+                description: "Calorie-aware meal timing with a consistent recovery emphasis.",
+                createdById: trainerKishore.id,
+                assignedToId: memberRahulVerma.id,
             },
         ],
     });
     const successPayment = await prisma.payment.create({
         data: {
             transactionId: "DEMO-UPI-001",
-            userId: users.memberActive.id,
+            userId: memberAanyaActive.id,
             subscriptionId: activeSubscription.id,
             amountMinor: proPlan.priceMinor,
             upiId: "aanya.active@okaxis",
             proofReference: "demo-proof-success",
             status: client_1.PaymentStatus.SUCCESS,
-            reviewedById: users.admin.id,
+            reviewedById: admin.id,
             reviewedAt: (0, lifecycle_1.addUtcDays)(today, -16),
             verificationNotes: "Demo verified payment for active member.",
             events: {
@@ -299,13 +475,13 @@ async function seedMembershipData(users) {
                     {
                         fromStatus: null,
                         toStatus: client_1.PaymentStatus.PENDING,
-                        changedById: users.memberActive.id,
+                        changedById: memberAanyaActive.id,
                         verificationNotes: null,
                     },
                     {
                         fromStatus: client_1.PaymentStatus.PENDING,
                         toStatus: client_1.PaymentStatus.SUCCESS,
-                        changedById: users.admin.id,
+                        changedById: admin.id,
                         verificationNotes: "Approved during demo seed.",
                     },
                 ],
@@ -315,7 +491,7 @@ async function seedMembershipData(users) {
     const pendingPayment = await prisma.payment.create({
         data: {
             transactionId: "DEMO-UPI-002",
-            userId: users.memberPending.id,
+            userId: memberVihaanPending.id,
             subscriptionId: pendingSubscription.id,
             amountMinor: basicPlan.priceMinor,
             upiId: "vihaan.pending@okaxis",
@@ -325,7 +501,7 @@ async function seedMembershipData(users) {
                 create: {
                     fromStatus: null,
                     toStatus: client_1.PaymentStatus.PENDING,
-                    changedById: users.memberPending.id,
+                    changedById: memberVihaanPending.id,
                     verificationNotes: null,
                 },
             },
@@ -334,13 +510,13 @@ async function seedMembershipData(users) {
     const endingPayment = await prisma.payment.create({
         data: {
             transactionId: "DEMO-UPI-003",
-            userId: users.memberEnding.id,
+            userId: memberSaraEnding.id,
             subscriptionId: endingSubscription.id,
             amountMinor: elitePlan.priceMinor,
             upiId: "sara.ending@okaxis",
             proofReference: "demo-proof-ending",
             status: client_1.PaymentStatus.SUCCESS,
-            reviewedById: users.admin.id,
+            reviewedById: admin.id,
             reviewedAt: (0, lifecycle_1.addUtcDays)(today, -35),
             verificationNotes: "Long-term membership confirmed.",
             events: {
@@ -348,13 +524,13 @@ async function seedMembershipData(users) {
                     {
                         fromStatus: null,
                         toStatus: client_1.PaymentStatus.PENDING,
-                        changedById: users.memberEnding.id,
+                        changedById: memberSaraEnding.id,
                         verificationNotes: null,
                     },
                     {
                         fromStatus: client_1.PaymentStatus.PENDING,
                         toStatus: client_1.PaymentStatus.SUCCESS,
-                        changedById: users.admin.id,
+                        changedById: admin.id,
                         verificationNotes: "Approved during demo seed.",
                     },
                 ],
@@ -364,13 +540,13 @@ async function seedMembershipData(users) {
     await prisma.payment.create({
         data: {
             transactionId: "DEMO-UPI-004",
-            userId: users.memberCancelled.id,
+            userId: memberKabirCancelled.id,
             subscriptionId: cancelledSubscription.id,
             amountMinor: (0, money_1.toMinorUnits)(999),
             upiId: "kabir.cancelled@okaxis",
             proofReference: "demo-proof-failed",
             status: client_1.PaymentStatus.FAILED,
-            reviewedById: users.admin.id,
+            reviewedById: admin.id,
             reviewedAt: (0, lifecycle_1.addUtcDays)(today, -42),
             verificationNotes: "Reference mismatch flagged by reviewer.",
             events: {
@@ -378,13 +554,13 @@ async function seedMembershipData(users) {
                     {
                         fromStatus: null,
                         toStatus: client_1.PaymentStatus.PENDING,
-                        changedById: users.memberCancelled.id,
+                        changedById: memberKabirCancelled.id,
                         verificationNotes: null,
                     },
                     {
                         fromStatus: client_1.PaymentStatus.PENDING,
                         toStatus: client_1.PaymentStatus.FAILED,
-                        changedById: users.admin.id,
+                        changedById: admin.id,
                         verificationNotes: "Reference mismatch flagged by reviewer.",
                     },
                 ],
@@ -397,8 +573,8 @@ async function seedMembershipData(users) {
     await prisma.progress.createMany({
         data: [
             {
-                userId: users.memberActive.id,
-                recordedById: users.trainer.id,
+                userId: memberAanyaActive.id,
+                recordedById: trainerSwasthik.id,
                 weight: 74,
                 height: 1.75,
                 bodyFat: 19.2,
@@ -408,8 +584,8 @@ async function seedMembershipData(users) {
                 recordedAt: (0, lifecycle_1.addUtcDays)(today, -7),
             },
             {
-                userId: users.memberEnding.id,
-                recordedById: users.admin.id,
+                userId: memberSaraEnding.id,
+                recordedById: admin.id,
                 weight: 69,
                 height: 1.68,
                 bodyFat: 18.4,
@@ -419,8 +595,8 @@ async function seedMembershipData(users) {
                 recordedAt: (0, lifecycle_1.addUtcDays)(today, -5),
             },
             {
-                userId: users.memberPending.id,
-                recordedById: users.trainer.id,
+                userId: memberVihaanPending.id,
+                recordedById: trainerSwasthik.id,
                 weight: 81,
                 height: 1.79,
                 bodyFat: 24.1,
@@ -437,8 +613,8 @@ async function seedMembershipData(users) {
             description: "Shared class slot for seeded member bookings.",
             sessionType: client_1.ScheduleSessionType.CLASS,
             location: "Main Floor",
-            trainerId: users.trainer.id,
-            createdById: users.admin.id,
+            trainerId: trainerSwasthik.id,
+            createdById: admin.id,
             startsAt: new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000),
             endsAt: new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000 + 19 * 60 * 60 * 1000),
             capacity: 10,
@@ -451,8 +627,8 @@ async function seedMembershipData(users) {
             description: "Past attendance history for seeded dashboards.",
             sessionType: client_1.ScheduleSessionType.RECOVERY,
             location: "Studio B",
-            trainerId: users.trainer.id,
-            createdById: users.admin.id,
+            trainerId: trainerSuhag.id,
+            createdById: admin.id,
             startsAt: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000 + 7 * 60 * 60 * 1000),
             endsAt: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000 + 8 * 60 * 60 * 1000),
             capacity: 8,
@@ -463,22 +639,22 @@ async function seedMembershipData(users) {
         data: [
             {
                 sessionId: upcomingSession.id,
-                memberId: users.memberActive.id,
+                memberId: memberAanyaActive.id,
                 status: client_1.ScheduleBookingStatus.BOOKED,
             },
             {
                 sessionId: upcomingSession.id,
-                memberId: users.memberEnding.id,
+                memberId: memberSaraEnding.id,
                 status: client_1.ScheduleBookingStatus.BOOKED,
             },
             {
                 sessionId: historySession.id,
-                memberId: users.memberActive.id,
+                memberId: memberAanyaActive.id,
                 status: client_1.ScheduleBookingStatus.ATTENDED,
             },
             {
                 sessionId: historySession.id,
-                memberId: users.memberCancelled.id,
+                memberId: memberKabirCancelled.id,
                 status: client_1.ScheduleBookingStatus.MISSED,
             },
         ],
@@ -502,7 +678,15 @@ async function seedMembershipData(users) {
 async function run() {
     assertSafeRuntime();
     const demoUsers = buildDemoUsers();
-    await resetExistingDemoData(demoUsers.map((user) => user.email));
+    const legacyDemoEmails = [
+        buildEmail("demo.admin"),
+        buildEmail("demo.trainer"),
+        buildEmail("aanya.active"),
+        buildEmail("vihaan.pending"),
+        buildEmail("sara.ending"),
+        buildEmail("kabir.cancelled"),
+    ];
+    await resetExistingDemoData([...demoUsers.map((user) => user.email), ...legacyDemoEmails]);
     const createdUsers = await createUsers(demoUsers);
     await seedMembershipData(createdUsers);
 }
