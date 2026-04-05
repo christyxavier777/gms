@@ -51,26 +51,6 @@ export default function DashboardLayout({ children, title = 'Dashboard' }) {
             <h1 className="mt-1 text-xl font-black uppercase tracking-[0.12em] md:text-2xl">{title}</h1>
           </header>
 
-          <nav className="mb-5 flex gap-2 overflow-x-auto pb-1 md:hidden">
-            {visibleNavItems.map((item) => {
-              const active = location.pathname === item.to
-              const Icon = item.icon
-              return (
-                <Link
-                  key={`mobile-${item.label}`}
-                  to={item.to}
-                  className={`flex items-center gap-2 whitespace-nowrap border px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] ${
-                    active
-                      ? 'border-[#ff8b5f] bg-[#E21A2C]/25 text-white'
-                      : 'border-white/15 bg-white/5 text-gray-200'
-                  }`}
-                >
-                  <Icon size={14} />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </nav>
           <div className="space-y-6">{children}</div>
         </main>
       </div>

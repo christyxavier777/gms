@@ -781,15 +781,23 @@ export default function Payments() {
             onSubmit={handleStartRazorpayCheckout}
             noValidate
             aria-describedby={hasStatusMessage ? ids.status : undefined}
-            className="border border-white/10 bg-white/5 p-5 backdrop-blur-[10px]"
+            className="border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.2)] backdrop-blur-[12px]"
           >
-            <h2 className="text-lg font-black uppercase tracking-[0.08em] text-white">Pay With Razorpay</h2>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#ffb26b]">Premium Checkout</p>
+                <h2 className="mt-1 text-lg font-black uppercase tracking-[0.08em] text-white">Pay With Razorpay</h2>
+              </div>
+              <span className="border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-100">
+                Live Payment
+              </span>
+            </div>
             <p className="mt-2 text-sm text-gray-300">
               Start a real Razorpay checkout for UPI or other enabled methods. Your membership updates only after Razorpay verification succeeds.
             </p>
 
             <div className="mt-4 space-y-3">
-              <div className="border border-white/10 bg-black/30 p-4">
+              <div className="border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,0.04),rgba(0,0,0,0.12))] p-4">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Checkout Target</p>
                 <p className="mt-1 text-lg font-black text-white">
                   {subscription?.planName || selectedPlanFromNavigation?.name || 'No current subscription linked'}
@@ -809,7 +817,7 @@ export default function Payments() {
                 )}
               </div>
 
-              <div className="border border-white/10 bg-black/30 p-4">
+              <div className="border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,0.04),rgba(0,0,0,0.12))] p-4">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Amount</p>
                 <p className="mt-1 text-2xl font-black text-white">
                   {suggestedAmount ? formatAmount(suggestedAmount) : 'Select a plan first'}
@@ -826,7 +834,7 @@ export default function Payments() {
                   actionStatus.actionKey === 'create-razorpay-order' ||
                   actionStatus.actionKey === 'verify-razorpay-payment'
                 }
-                className="border border-[#E21A2C] bg-[#E21A2C] px-4 py-2 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:bg-[#f24c5c] disabled:cursor-not-allowed disabled:opacity-60"
+                className="border border-[#E21A2C] bg-[#E21A2C] px-4 py-3 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:bg-[#f24c5c] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {actionStatus.actionKey === 'create-razorpay-order'
                   ? 'Starting Checkout...'

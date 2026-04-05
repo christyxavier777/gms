@@ -34,7 +34,7 @@ function readOptionalEnv(name: string, fallback = ""): string {
 }
 
 function buildEmail(localPart: string): string {
-  const domain = readOptionalEnv("DEMO_EMAIL_DOMAIN", "demo.gms.local");
+  const domain = readOptionalEnv("DEMO_EMAIL_DOMAIN", "gmail.com");
   return `${localPart}@${domain}`.toLowerCase();
 }
 
@@ -246,8 +246,14 @@ function assertSafeRuntime(): void {
 }
 
 async function resetExistingDemoData(emails: string[]): Promise<void> {
+  const existingPhones = buildDemoUsers().map((user) => user.phone);
   const existingUsers = await prisma.user.findMany({
-    where: { email: { in: emails } },
+    where: {
+      OR: [
+        { email: { in: emails } },
+        { phone: { in: existingPhones } },
+      ],
+    },
     select: { id: true },
   });
   const userIds = existingUsers.map((user) => user.id);

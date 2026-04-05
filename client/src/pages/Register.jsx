@@ -73,6 +73,41 @@ function getPreferredPlan(plans, preferredPlanId) {
   return plans.find((plan) => plan.id === preferredPlanId) || plans[0] || null
 }
 
+function getStepTone(stepNumber, currentStep) {
+  if (currentStep > stepNumber) {
+    return 'border-emerald-400/40 bg-[linear-gradient(155deg,rgba(16,185,129,0.24),rgba(255,255,255,0.04))] text-emerald-200'
+  }
+
+  if (currentStep === stepNumber) {
+    return 'border-[#E21A2C]/60 bg-[linear-gradient(155deg,rgba(226,26,44,0.3),rgba(255,122,69,0.12))] text-white shadow-[0_12px_30px_rgba(226,26,44,0.18)]'
+  }
+
+  return 'border-white/10 bg-white/5 text-gray-400'
+}
+
+function loadRazorpayCheckoutScript() {
+  if (window.Razorpay) {
+    return Promise.resolve(true)
+  }
+
+  return new Promise((resolve) => {
+    const existing = document.querySelector('script[data-razorpay-checkout="true"]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true), { once: true })
+      existing.addEventListener('error', () => resolve(false), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.async = true
+    script.dataset.razorpayCheckout = 'true'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
+
 export default function Register() {
   const baseId = useId()
   const [step, setStep] = useState(1)
@@ -391,6 +426,7 @@ export default function Register() {
 
       setActivation((current) => ({
         ...current,
+        subscription: data.payment?.subscription || current.subscription,
         payment: data.payment,
       }))
       setStep(4)
@@ -400,6 +436,101 @@ export default function Register() {
         payment: getFriendlyFlowError(err, 'payment'),
       }))
     } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleRazorpayCheckout = async () => {
+    if (!activation.account || !activation.subscription) {
+      setError((current) => ({
+        ...current,
+        form: 'Finish account and membership setup before starting Razorpay checkout.',
+      }))
+      setStep(2)
+      return
+    }
+
+    setIsSubmitting(true)
+    setError((current) => {
+      const next = { ...current }
+      delete next.payment
+      delete next.form
+      return next
+    })
+
+    try {
+      const checkoutScriptReady = await loadRazorpayCheckoutScript()
+      if (!checkoutScriptReady || !window.Razorpay) {
+        throw new Error('Could not load Razorpay Checkout. Please try again.')
+      }
+
+      const orderResult = await api.createRazorpayOrder(activation.sessionToken || 'cookie-session', {
+        subscriptionId: activation.subscription.id,
+      })
+
+      const razorpay = new window.Razorpay({
+        key: orderResult.checkout.keyId,
+        amount: orderResult.checkout.amount,
+        currency: orderResult.checkout.currency,
+        name: orderResult.checkout.name,
+        description: orderResult.checkout.description,
+        order_id: orderResult.checkout.orderId,
+        prefill: orderResult.checkout.prefill,
+        theme: {
+          color: '#E21A2C',
+        },
+        handler: async (response) => {
+          try {
+            const verificationResult = await api.verifyRazorpayPayment(
+              activation.sessionToken || 'cookie-session',
+              {
+                paymentId: orderResult.payment.id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              },
+            )
+
+            setActivation((current) => ({
+              ...current,
+              subscription: verificationResult.payment?.subscription || current.subscription,
+              payment: verificationResult.payment,
+            }))
+            setStep(4)
+          } catch (err) {
+            setError((current) => ({
+              ...current,
+              payment: getFriendlyFlowError(err, 'payment'),
+            }))
+          } finally {
+            setIsSubmitting(false)
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setIsSubmitting(false)
+            setError((current) => ({
+              ...current,
+              payment: 'Razorpay checkout was closed before payment completion.',
+            }))
+          },
+        },
+      })
+
+      razorpay.on('payment.failed', (response) => {
+        setIsSubmitting(false)
+        setError((current) => ({
+          ...current,
+          payment: response?.error?.description || 'Razorpay payment failed. Please try again.',
+        }))
+      })
+
+      razorpay.open()
+    } catch (err) {
+      setError((current) => ({
+        ...current,
+        payment: getFriendlyFlowError(err, 'payment'),
+      }))
       setIsSubmitting(false)
     }
   }
@@ -449,21 +580,23 @@ export default function Register() {
     if (!isMemberFlow) return null
 
     return (
-      <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.08em]">
+      <div className="grid gap-2 text-xs font-bold uppercase tracking-[0.08em] sm:grid-cols-4">
         {stepLabels.map((label, index) => {
           const stepNumber = index + 1
-          const isActive = step === stepNumber
-          const isComplete = step > stepNumber
 
           return (
-            <span
+            <div
               key={label}
-              className={`px-3 py-1 ${
-                isComplete || isActive ? 'bg-[#E21A2C] text-white' : 'bg-white/15 text-gray-200'
-              }`}
+              className={`flex min-w-[120px] items-center gap-3 border px-3 py-2 ${getStepTone(stepNumber, step)}`}
             >
-              {stepNumber}. {label}
-            </span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-current text-[11px]">
+                {step > stepNumber ? '✓' : stepNumber}
+              </span>
+              <span className="leading-tight">
+                <span className="block text-[10px] tracking-[0.14em] text-gray-400/90">Step {stepNumber}</span>
+                <span className="block">{label}</span>
+              </span>
+            </div>
           )
         })}
       </div>
@@ -474,18 +607,21 @@ export default function Register() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b0f14] px-4 py-10 text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(226,26,44,0.22),transparent_40%),radial-gradient(circle_at_80%_90%,rgba(255,116,61,0.2),transparent_38%),linear-gradient(150deg,#080a0f_0%,#101822_55%,#0b0f14_100%)]" />
 
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,rgba(255,214,170,0.12),transparent_55%)]" />
+
       <form
         onSubmit={handleSubmit}
         noValidate
         aria-describedby={error.form ? ids.formMessage : undefined}
-        className="relative w-full max-w-4xl space-y-6 border border-white/10 bg-black/45 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-[20px]"
+        className="relative w-full max-w-5xl space-y-6 overflow-hidden border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,20,0.92),rgba(7,10,16,0.82))] p-6 shadow-[0_28px_100px_rgba(0,0,0,0.52)] backdrop-blur-[22px]"
       >
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.05),transparent_28%,transparent_72%,rgba(255,255,255,0.03))]" />
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#ff7a45]">
+          <div className="relative max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ffb26b]">
               {isMemberFlow ? 'Onboarding' : 'Team Access'}
             </p>
-            <h1 className="mt-1 text-2xl font-black uppercase tracking-[0.08em]">
+            <h1 className="mt-2 bg-[linear-gradient(90deg,#fff6e9_0%,#ffffff_35%,#ffd5b6_100%)] bg-clip-text text-3xl font-black uppercase tracking-[0.08em] text-transparent sm:text-4xl">
               {isMemberFlow ? 'Create Your Gym Account' : 'Create Staff Account'}
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-gray-300">
@@ -493,6 +629,25 @@ export default function Register() {
                 ? 'Complete registration, choose a membership, submit your payment, and finish with a clear activation summary.'
                 : 'Create an invited admin or trainer account with the correct access code.'}
             </p>
+            {isMemberFlow && (
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] px-3 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Live Catalog</p>
+                  <p className="mt-1 text-lg font-black text-white">{membershipPlans.length || '-'}</p>
+                  <p className="text-xs text-gray-400">Packages ready to present</p>
+                </div>
+                <div className="border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] px-3 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Preferred Flow</p>
+                  <p className="mt-1 text-lg font-black text-white">Razorpay</p>
+                  <p className="text-xs text-gray-400">Fastest demo checkout</p>
+                </div>
+                <div className="border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] px-3 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Fallback</p>
+                  <p className="mt-1 text-lg font-black text-white">Manual UPI</p>
+                  <p className="text-xs text-gray-400">Use if checkout is blocked</p>
+                </div>
+              </div>
+            )}
           </div>
           {renderProgress()}
         </div>
@@ -780,32 +935,60 @@ export default function Register() {
                   aria-checked={selectedPlanId === plan.id}
                   className={`border p-4 text-left transition-colors ${
                     selectedPlanId === plan.id
-                      ? 'border-[#E21A2C] bg-[#E21A2C]/15'
-                      : 'border-white/10 bg-white/5 hover:border-[#ff7a45]/70'
+                      ? 'border-[#E21A2C] bg-[linear-gradient(160deg,rgba(226,26,44,0.22),rgba(255,122,69,0.08))] shadow-[0_14px_32px_rgba(226,26,44,0.16)]'
+                      : 'border-white/10 bg-white/5 hover:border-[#ff7a45]/70 hover:bg-white/10'
                   }`}
                 >
-                  <p className="text-xs font-bold uppercase tracking-[0.1em] text-[#ff7a45]">{plan.name}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs font-bold uppercase tracking-[0.1em] text-[#ff7a45]">{plan.name}</p>
+                    {selectedPlanId === plan.id ? (
+                      <span className="border border-[#ff8b5f]/40 bg-[#ff8b5f]/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                        Selected
+                      </span>
+                    ) : plan.id === preferredDefaultPlanId ? (
+                      <span className="border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-200">
+                        Recommended
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="mt-1 text-xl font-black text-white">{formatAmount(plan.priceInr)}</p>
-                  <p className="text-xs text-gray-300">{plan.durationDays} days</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.08em] text-gray-300">
+                    <span className="border border-white/10 bg-black/30 px-2 py-1">{plan.durationDays} days</span>
+                    <span className="border border-white/10 bg-black/30 px-2 py-1">
+                      {formatAmount(plan.priceInr / Math.max(plan.durationDays / 30, 1))}/month
+                    </span>
+                  </div>
                   <p className="mt-2 text-xs text-gray-400">{plan.perks}</p>
                 </button>
               ))}
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="border border-white/10 bg-white/5 p-4">
+              <div className="border border-white/10 bg-[linear-gradient(160deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-4">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Selected Package</p>
                 <p className="mt-1 text-lg font-black text-white">{selectedPlan?.name || 'Choose a package'}</p>
                 <p className="mt-2 text-sm text-gray-300">
                   {selectedPlan?.perks || 'Package details will appear here after the catalog loads.'}
                 </p>
+                {selectedPlan && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="border border-[#ff8b5f]/30 bg-[#ff8b5f]/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#ffd3c4]">
+                      Starts immediately after payment
+                    </span>
+                    <span className="border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-200">
+                      Best for demo-ready onboarding
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="border border-white/10 bg-black/30 p-4">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">What Happens Next</p>
-                <p className="mt-1 text-sm text-gray-300">
-                  We create your account first, then set up the membership immediately, and finally ask for payment details.
-                </p>
-                <p className="mt-2 text-xs uppercase tracking-[0.08em] text-[#ff7a45]">
+                <div className="mt-3 space-y-2 text-sm text-gray-300">
+                  <p>1. We create the account and sign you in.</p>
+                  <p>2. We reserve the chosen membership window.</p>
+                  <p>3. You complete payment with Razorpay or fallback UPI.</p>
+                </div>
+                <p className="mt-3 text-xs uppercase tracking-[0.08em] text-[#ff7a45]">
                   If something fails after account creation, retry continues from that point instead of starting over.
                 </p>
               </div>
@@ -814,9 +997,9 @@ export default function Register() {
         )}
 
         {isMemberFlow && step === 3 && (
-          <fieldset className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <fieldset className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
             <legend className="sr-only">Submit payment details</legend>
-            <article className="border border-white/10 bg-white/5 p-5">
+            <article className="border border-white/10 bg-[linear-gradient(165deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-5">
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#ff7a45]">Ready For Payment</p>
               <h2 className="mt-1 text-xl font-black uppercase tracking-[0.08em] text-white">
                 Review your activation before paying
@@ -843,8 +1026,16 @@ export default function Register() {
                     Plan duration: {selectedPlan?.durationDays ?? '-'} days
                   </p>
                   <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#ff7a45]">
-                    Payment will be submitted as pending admin review
+                    Pay now with Razorpay or keep manual UPI as your backup option
                   </p>
+                </div>
+              </div>
+              <div className="mt-4 border border-white/10 bg-black/30 p-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">Demo Checklist</p>
+                <div className="mt-3 space-y-2 text-sm text-gray-300">
+                  <p>Account has been created and saved.</p>
+                  <p>Membership period is already reserved.</p>
+                  <p>Payment method is the only remaining step.</p>
                 </div>
               </div>
             </article>
@@ -855,8 +1046,52 @@ export default function Register() {
                 Submit your payment details
               </h2>
               <p className="mt-2 text-sm text-gray-300">
-                Use the amount suggested for your package unless your gym staff told you otherwise.
+                Razorpay is the primary checkout here. Manual UPI details stay available if you need a fallback during the demo.
               </p>
+
+              <div className="mt-4 border border-[#E21A2C]/30 bg-[linear-gradient(160deg,rgba(226,26,44,0.18),rgba(255,122,69,0.08))] p-5 shadow-[0_14px_40px_rgba(226,26,44,0.14)]">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#ffb0b7]">Recommended</p>
+                    <p className="mt-1 text-base font-black text-white">Pay with Razorpay Checkout</p>
+                  </div>
+                  <span className="border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-100">
+                    Fastest path
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-gray-200">
+                  This opens the live Razorpay flow, verifies the payment, and keeps the membership/payment record linked automatically.
+                </p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  <div className="border border-white/10 bg-black/20 px-3 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-300">Amount</p>
+                    <p className="mt-1 text-lg font-black text-white">{formatAmount(paymentForm.amount)}</p>
+                  </div>
+                  <div className="border border-white/10 bg-black/20 px-3 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-300">Plan</p>
+                    <p className="mt-1 text-lg font-black text-white">{activation.subscription?.planName || '-'}</p>
+                  </div>
+                  <div className="border border-white/10 bg-black/20 px-3 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-300">Validity</p>
+                    <p className="mt-1 text-lg font-black text-white">{formatDate(activation.subscription?.endDate)}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRazorpayCheckout}
+                  disabled={isSubmitting}
+                  className="mt-5 w-full border border-[#E21A2C] bg-[#E21A2C] px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#c31626] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting ? 'Opening Razorpay...' : 'Pay With Razorpay'}
+                </button>
+              </div>
+
+              <div className="mt-5 border border-white/10 bg-black/20 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-300">Alternative Method</p>
+                <p className="mt-1 text-sm text-gray-400">
+                  Use this only if you need to record a manual transfer for the demo or if Razorpay checkout is unavailable.
+                </p>
+              </div>
 
               <div className="mt-4 space-y-4">
                 <label className="block">
@@ -944,7 +1179,7 @@ export default function Register() {
                 )}
 
                 <div className="border border-white/10 bg-black/30 p-4 text-sm text-gray-300">
-                  This creates a payment record linked to your new membership so the gym team can verify it without asking you to restart onboarding.
+                  Manual submission still creates a payment record linked to your new membership so the gym team can verify it without asking you to restart onboarding.
                 </div>
               </div>
             </article>
@@ -953,7 +1188,7 @@ export default function Register() {
 
         {isMemberFlow && step === 4 && (
           <section className="space-y-5">
-            <div className="border border-emerald-400/30 bg-emerald-500/10 p-5">
+            <div className="border border-emerald-400/30 bg-[linear-gradient(160deg,rgba(16,185,129,0.18),rgba(34,197,94,0.08))] p-5">
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-200">Onboarding Complete</p>
               <h2 className="mt-1 text-2xl font-black uppercase tracking-[0.08em] text-white">
                 Your gym account is ready
@@ -983,7 +1218,9 @@ export default function Register() {
                 <p className="mt-1 text-2xl font-black text-white">
                   {formatAmount(activation.payment?.amount || paymentForm.amount)}
                 </p>
-                <p className="mt-1 text-sm text-gray-300">UPI: {activation.payment?.upiId || paymentForm.upiId}</p>
+                <p className="mt-1 text-sm text-gray-300">
+                  Method: {activation.payment?.upiId === 'RAZORPAY_CHECKOUT' ? 'Razorpay Checkout' : activation.payment?.upiId || paymentForm.upiId}
+                </p>
                 {(activation.payment?.proofReference || paymentForm.proofReference) && (
                   <p className="mt-1 break-all text-sm text-gray-300">
                     Proof reference: {activation.payment?.proofReference || paymentForm.proofReference}
@@ -1002,10 +1239,10 @@ export default function Register() {
                   {activation.subscription?.plan?.durationDays || selectedPlan?.durationDays || '-'} days.
                 </p>
                 <p className="mt-1 text-sm text-gray-300">
-                  Payment: submitted to the admin review queue with transaction tracking.
+                  Payment: linked to the membership with transaction tracking and checkout details.
                 </p>
                 <p className="mt-1 text-sm text-gray-300">
-                  Lifecycle: membership stays pending activation until payment review succeeds.
+                  Lifecycle: the membership window now reflects the verified payment or stays queued for follow-up.
                 </p>
               </article>
               <article className="border border-white/10 bg-black/30 p-4">
@@ -1070,7 +1307,7 @@ export default function Register() {
             >
               {isSubmitting
                 ? step === 3
-                  ? 'Submitting payment...'
+                  ? 'Processing payment...'
                   : activation.account
                     ? 'Finishing membership setup...'
                     : 'Creating account...'
@@ -1079,10 +1316,10 @@ export default function Register() {
                   : step === 1
                     ? 'Continue To Package'
                     : step === 2
-                      ? activation.account
-                        ? 'Retry Membership Setup'
-                        : 'Continue To Payment'
-                      : 'Submit Payment And Finish'}
+                    ? activation.account
+                      ? 'Retry Membership Setup'
+                      : 'Continue To Payment'
+                      : 'Submit Manual Payment'}
             </button>
           </div>
         )}
